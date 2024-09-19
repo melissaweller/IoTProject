@@ -1,3 +1,8 @@
+# To Run
+Install GPIO and Flask
+- sudo apt-get install rpi.gpio
+- pip install -U Flask
+
 # Project description
 By utilizing sensors, actuators, motors, Single-board computers, and micro-controllers, students
 design and simulate a smart home. They capture environmental information and make a decision
