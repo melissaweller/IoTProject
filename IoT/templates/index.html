@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LED Control</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+        .status {
+            font-size: 2rem;
+            margin: 20px;
+        }
+        .image-container {
+            display: flex !important; /* Ensure Flexbox is applied */
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            padding: 10px; /* Padding to ensure spacing */
+        }
+        img {
+            width: 100px; /* Adjust size as needed */
+            height: auto;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Control the LED</h1>
+
+    <!-- Toggle button using an image (changes based on LED status) -->
+    <form method="POST" action="/toggle">
+        <div class="image-container">
+            {% if led_status %}
+                <button type="submit" style="border:none;background:none;">
+                    <img src="/static/switch_off.jpeg" alt="Turn Off Switch">
+                </button>
+
+                <!-- Display the LED status and corresponding light bulb image -->
+                <div class="status">
+                    <div class="image-container">
+                        <img src="/static/light_on.png" alt="Light Bulb On" class="{% if not led_status %}hidden{% endif %}">
+                        <img src="/static/light_off.png" alt="Light Bulb Off" class="{% if led_status %}hidden{% endif %}">
+                    </div>
+                </div>
+
+            {% else %}
+                <button type="submit" style="border:none;background:none;">
+                    <img src="/static/switch_on.jpeg" alt="Turn On Switch">
+                </button>
+
+                <!-- Display the LED status and corresponding light bulb image -->
+                <div class="status">
+                    <div class="image-container">
+                        <img src="/static/light_on.png" alt="Light Bulb On" class="{% if not led_status %}hidden{% endif %}">
+                        <img src="/static/light_off.png" alt="Light Bulb Off" class="{% if led_status %}hidden{% endif %}">
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </form>
+
+</body>
+</html>
