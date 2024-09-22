@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPIO Control</title>
+    <script>
+        function toggleLED(state) {
+            fetch('/toggle', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'state=' + state
+            })
+            .then(response => response.json())  // Parse JSON response
+            .then(data => {
+                console.log(data);
+                // Update the image based on the LED state
+                const bulbImage = document.getElementById('bulb-image');
+                if (data.led_state === 'on') {
+                    bulbImage.src = '/static/on_bulb.png';  // Light bulb "on" image
+                } else {
+                    bulbImage.src = '/static/off_bulb.png';  // Light bulb "off" image
+                }
+            });
+        }
+    </script>
+</head>
+<body>
+    <h1>GPIO LED Control</h1>
+
+    <!-- Light bulb image, updated dynamically based on the LED state -->
+    <img id="bulb-image" src="{% if led_state == 'on' %}/static/on_bulb.png{% else %}/static/off_bulb.png{% endif %}" alt="Light bulb" width="100" height="100">
+    
+    <br>
+    
+    <!-- Buttons to control the LED -->
+    <button type="button" onclick="toggleLED('on')">Turn On LED</button>
+    <button type="button" onclick="toggleLED('off')">Turn Off LED</button>
+</body>
+</html>
