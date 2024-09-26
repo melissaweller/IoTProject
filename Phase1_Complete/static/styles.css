@@ -1,0 +1,32 @@
+body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+        .status {
+            font-size: 2rem;
+            margin: 20px;
+        }
+        .image-container {
+            display: flex !important; /* Ensure Flexbox is applied */
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            padding: 10px; /* Padding to ensure spacing */
+        }
+        img {
+            width: 100px; /* Adjust size as needed */
+            height: auto;
+        }
+        .hidden {
+            display: none;
+        }
+
+.led-on {
+    color: green;
+}
+
+.led-off {
+    color: red;
+}
+

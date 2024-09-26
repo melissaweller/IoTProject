@@ -8,7 +8,7 @@ app = Flask(__name__)
 # Set up the GPIO pin for the LED
 
 # **** COMMENTED IT OUT SO I COULD RUN ON WINDOWS
-LED_PIN = 17
+LED_PIN = 18
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(LED_PIN, GPIO.OUT)
 
