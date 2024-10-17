@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.3.0/raphael.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/justgage/1.3.2/justgage.min.js"></script>
+</head>
+<body>
+    <h1>IoT Dashboard</h1>
+    <div class="card">
+        <form method="POST" action="/toggle">
+            <div class="image-container">
+                {% if led_status %}
+                    <button type="submit" title="Turn Off LED">
+                        <img src="/static/switch_off.jpeg" alt="Turn Off Switch">
+                    </button>
+                    <img src="/static/light_on.png" alt="Light Bulb On">
+                {% else %}
+                    <button type="submit" title="Turn On LED">
+                        <img src="/static/switch_on.jpeg" alt="Turn On Switch">
+                    </button>
+                    <img src="/static/light_off.png" alt="Light Bulb Off">
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <div id="gauges" class="center">
+        <h1>Temperature</h1>
+        <div id="tempGauge" class="gauge"></div>
+        <h1>Humidity</h1>
+        <div id="humidityGauge" class="gauge"></div> 
+    </div>
+
+    <script>
+        var tempGauge = new JustGage({
+            id: "tempGauge",
+            value: 0,
+            min: 0,
+            max: 50,
+            title: "Temperature (°C)",
+            label: "°C"
+        });
+
+        var humidityGauge = new JustGage({
+            id: "humidityGauge",
+            value: 0,
+            min: 0,
+            max: 100,
+            title: "Humidity (%)",
+            label: "%"
+        });
+
+        function updateGauges(temperature, humidity) {
+            tempGauge.refresh(temperature);
+            humidityGauge.refresh(humidity);
+        }
+
+        setInterval(async () => {
+            try {
+                const response = await fetch('http://127.0.0.1:5000/data');
+                const data = await response.json();
+                updateGauges(data.temperature, data.humidity);
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        }, 5000); 
+    </script>
+</body>
+</html>
