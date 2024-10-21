@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.3.0/raphael.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/justgage/1.3.2/justgage.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Dashboard</h1>
+    </header>
+    
+    <section class="container">
+        <div class="card">
+            <div class="image-container">
+                <button id="toggle-button" title="Toggle LED">
+                    {% if led_status %}
+                        <img src="/static/switch_off.jpeg" alt="Turn Off Switch">
+                    {% else %}
+                        <img src="/static/switch_on.jpeg" alt="Turn On Switch">
+                    {% endif %}
+                </button>
+                <img src="{% if led_status %}/static/light_on.png{% else %}/static/light_off.png{% endif %}" alt="Light Bulb" class="light-bulb">
+            </div>
+        </div>
+
+        <div id="gauges-fan" class="gauges-fan-container">
+            <!-- Temperature Gauge -->
+            <div class="gauge-container">
+                <h2>Temperature</h2>
+                <div id="tempGauge" class="gauge"></div>
+            </div>
+
+            <!-- Humidity Gauge -->
+            <div class="gauge-container">
+                <h2>Humidity</h2>
+                <div id="humidityGauge" class="gauge"></div>
+            </div>
+
+            <!-- Fan Control -->
+            <div class="gauge-container">
+                <h2>Fan</h2>
+                    {% if fan_status %}
+                        <img src="/static/fan_on.png" alt="Fan On" class="fan-image">
+                    {% else %}
+                        <img src="/static/fan_off.png" alt="Fan Off" class="fan-image">
+                    {% endif %}
+            </div>
+        </div>
+    </section>
+
+    <script>
+        $(document).ready(function() {
+            $('#toggle-button').click(function(event) {
+                event.preventDefault(); 
+                $.post('/toggle', function() {
+                    $.getJSON('/status', function(data) {
+                        $('#toggle-button img').attr('src', data.led_status ? '/static/switch_off.jpeg' : '/static/switch_on.jpeg');
+                        $('.light-bulb').attr('src', data.led_status ? '/static/light_on.png' : '/static/light_off.png');
+                    });
+                });
+            });
+        });
+
+        var tempGauge = new JustGage({
+            id: "tempGauge",
+            value: 20,
+            min: 0,
+            max: 50,
+            title: "Temperature (°C)",
+            label: "°C"
+        });
+
+        var humidityGauge = new JustGage({
+            id: "humidityGauge",
+            value: 20,
+            min: 0,
+            max: 100,
+            title: "Humidity (%)",
+            label: "%"
+        });
+
+        function updateGauges(temperature, humidity) {
+            tempGauge.refresh(temperature);
+            humidityGauge.refresh(humidity);
+        }
+
+        setInterval(async () => {
+            try {
+                const response = await fetch('http://127.0.0.1:5000/data');
+                const data = await response.json();
+                updateGauges(data.temperature, data.humidity);
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        }, 5000);
+    </script>
+</body>
+</html>
