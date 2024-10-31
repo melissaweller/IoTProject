@@ -99,7 +99,6 @@
                 }
             }, 5000);
             
-            // Polling fan status every 5 seconds
             setInterval(async () => {
                 try {
                     const response = await fetch('/fan/status');
