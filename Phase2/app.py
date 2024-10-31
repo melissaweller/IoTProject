@@ -24,12 +24,13 @@ Motor3 = 23  # Input Pin
 GPIO.setup(Motor1, GPIO.OUT)
 GPIO.setup(Motor2, GPIO.OUT)
 GPIO.setup(Motor3, GPIO.OUT)
+GPIO.output(Motor1, GPIO.LOW)
 
 # Email setup
 smtp_ssl_host = 'smtp.gmail.com'
 smtp_ssl_port = 465
 username = 'iotproject87@gmail.com'
-password = 'your_password'  # Use app password for security
+password = 'kxro xgri kvhb jbdq'
 from_addr = 'iotproject87@gmail.com'
 to_addrs = 'testingsample2003@gmail.com'
 email_sent = False
@@ -82,7 +83,7 @@ def check_email_response():
                             print(f'Subject: {mail_subject}')
                             print(f'Content: {mail_content}')
 
-                            if 'Re: Temperature Alert' in mail_subject and mail_from == to_addrs:
+                            if 'Re: Temperature Alert' in mail_subject and mail_from == 'Melissa Weller <' + to_addrs + '>':
                                 if 'yes' in mail_content.lower():
                                     GPIO.output(Motor1, GPIO.HIGH)
                                     GPIO.output(Motor2, GPIO.HIGH)
@@ -102,32 +103,35 @@ def check_email_response():
 
 @app.route('/')
 def index():
-    # Fetch current motor status
-    motor_status = GPIO.input(Motor1)  # Check if Motor1 is active
-    fan_status = motor_status == GPIO.HIGH  # Determine if the fan is on
+    motor_status = GPIO.input(Motor1)
+    fan_status = motor_status == GPIO.HIGH 
     return render_template('index.html', fan_status=fan_status)
 
 @app.route('/data')
 def data():
     global email_sent
     try:
-        dht_sensor.readDHT11()  # Read from the DHT sensor
-        humidity = dht_sensor.getHumidity()
-        temperature = dht_sensor.getTemperature()
-        print(temperature)
-        if temperature is not None and humidity is not None:
-            if temperature > 20 and not email_sent:
-                send_email(temperature)
-                email_sent = True
-            return jsonify({'temperature': temperature, 'humidity': humidity})
+        result = dht_sensor.readDHT11()
+        if result == 0: 
+            humidity = dht_sensor.getHumidity()
+            temperature = dht_sensor.getTemperature()
+            print(f"Temperature: {temperature}, Humidity: {humidity}")
+            if temperature is not None and humidity is not None:
+                if temperature > 20 and not email_sent:
+                    send_email(temperature)
+                    email_sent = True
+                return jsonify({'temperature': temperature, 'humidity': humidity})
+            else:
+                return jsonify({'error': 'Failed to read from sensor'}), 500
         else:
             return jsonify({'error': 'Failed to read from sensor'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
 @app.route('/fan/status')
 def fan_status():
-    status = GPIO.input(Motor1)  # Use Motor1 to check fan status
+    status = GPIO.input(Motor1)
     return jsonify({'fan_status': status})
 
 email_thread = threading.Thread(target=check_email_response)
@@ -136,7 +140,7 @@ email_thread.start()
 
 if __name__ == '__main__':
     try:
-        app.run(host='0.0.0.0', port=5006, debug=True)
+        app.run(host='0.0.0.0', port=5001, debug=True)
     except KeyboardInterrupt:
         pass
     finally:
