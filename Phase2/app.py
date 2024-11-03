@@ -10,12 +10,19 @@ import threading
 
 app = Flask(__name__)
 
-# Setup
-DHT_PIN = 17
-dht_sensor = DHT(DHT_PIN)
-
 # GPIO setup
 GPIO.setmode(GPIO.BCM)
+
+# LED
+LED_PIN = 18
+GPIO.setup(LED_PIN, GPIO.OUT)
+
+# Initial LED status (False = OFF, True = ON)
+led_status = False
+
+# DHT11
+DHT_PIN = 17
+dht_sensor = DHT(DHT_PIN)
 
 # Motor setup
 Motor1 = 22  # Enable Pin
@@ -104,9 +111,10 @@ def check_email_response():
 
 @app.route('/')
 def index():
+    global led_status
     motor_status = GPIO.input(Motor1)
     fan_status = motor_status == GPIO.HIGH 
-    return render_template('index.html', fan_status=fan_status)
+    return render_template('index.html', fan_status=fan_status, led_status=led_status)
 
 @app.route('/data')
 def data():
@@ -131,7 +139,14 @@ def data():
         print(f"Exception in /data route: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/toggle', methods=['POST'])
+def toggle():
+    global led_status
 
+    led_status = not led_status
+    GPIO.output(LED_PIN, GPIO.HIGH if led_status else GPIO.LOW)
+    
+    return render_template('index.html', led_status=led_status)
 
 @app.route('/fan/status')
 def fan_status():
