@@ -82,7 +82,7 @@
                 title: "Humidity (%)",
                 label: "%"
             });
-    
+    //Make sure when running file, click the right IP address or else it wont update
             async function updateGauges() {
                 try {
                     const response = await fetch('http://127.0.0.1:5001/data');
