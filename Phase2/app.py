@@ -48,9 +48,11 @@ def send_email(temperature):
         server.quit()
     except Exception as e:
         print(f"Error sending email: {e}")
+# Global variable to track motor state
+motor_running = False
 
 def check_email_response():
-    global email_sent
+    global email_sent, motor_running
     while True:
         try:
             mail = imaplib.IMAP4_SSL('imap.gmail.com')
@@ -78,23 +80,22 @@ def check_email_response():
                                         mail_content = part.get_payload(decode=True).decode()
                             else:
                                 mail_content = message.get_payload(decode=True).decode()
-                            
+
                             print(f'From: {mail_from}')
                             print(f'Subject: {mail_subject}')
                             print(f'Content: {mail_content}')
 
                             if 'Re: Temperature Alert' in mail_subject and mail_from == 'Melissa Weller <' + to_addrs + '>':
                                 if 'yes' in mail_content.lower():
-                                    GPIO.output(Motor1, GPIO.HIGH)
-                                    GPIO.output(Motor2, GPIO.HIGH)
-                                    GPIO.output(Motor3, GPIO.LOW)
+                                    GPIO.output(Motor1, GPIO.HIGH)  # Start the motor
+                                    motor_running = True
                                     print("Fan turned ON based on email response.")
                                 elif 'no' in mail_content.lower():
-                                    GPIO.output(Motor1, GPIO.LOW)
-                                    GPIO.output(Motor2, GPIO.LOW)
-                                    GPIO.output(Motor3, GPIO.LOW) 
+                                    GPIO.output(Motor1, GPIO.LOW)  # Stop the motor
+                                    motor_running = False
                                     print("Fan turned OFF based on email response.")
                                     email_sent = False 
+
             mail.logout()
         except Exception as e:
             print(f"Error checking email: {e}")
@@ -112,7 +113,7 @@ def data():
     global email_sent
     try:
         result = dht_sensor.readDHT11()
-        if result == 0: 
+        if result == 0:
             humidity = dht_sensor.getHumidity()
             temperature = dht_sensor.getTemperature()
             print(f"Temperature: {temperature}, Humidity: {humidity}")
@@ -124,9 +125,12 @@ def data():
             else:
                 return jsonify({'error': 'Failed to read from sensor'}), 500
         else:
+            print("DHT read failed.")
             return jsonify({'error': 'Failed to read from sensor'}), 500
     except Exception as e:
+        print(f"Exception in /data route: {e}")
         return jsonify({'error': str(e)}), 500
+
 
 
 @app.route('/fan/status')

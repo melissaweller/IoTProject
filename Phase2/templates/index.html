@@ -29,19 +29,26 @@
         </div>
 
         <div id="gauges-fan" class="gauges-fan-container">
+            <!-- Temperature Gauge -->
             <div class="gauge-container">
                 <h2>Temperature</h2>
                 <div id="tempGauge" class="gauge"></div>
             </div>
 
+            <!-- Humidity Gauge -->
             <div class="gauge-container">
                 <h2>Humidity</h2>
                 <div id="humidityGauge" class="gauge"></div>
             </div>
 
+            <!-- Fan Control -->
             <div class="gauge-container">
                 <h2>Fan</h2>
-                <img id="fan-image" src="{% if fan_status %}/static/fan_on.png{% else %}/static/fan_off.png{% endif %}" alt="Fan Status" class="fan-image">
+                    {% if fan_status %}
+                        <img src="/static/fan_on.png" alt="Fan On" class="fan-image">
+                    {% else %}
+                        <img src="/static/fan_off.png" alt="Fan Off" class="fan-image">
+                    {% endif %}
             </div>
         </div>
     </section>
@@ -57,58 +64,45 @@
                     });
                 });
             });
-
-            function updateFanImage(status) {
-                $('#fan-image').attr('src', status ? '/static/fan_on.png' : '/static/fan_off.png');
-            }
-
+    
             var tempGauge = new JustGage({
                 id: "tempGauge",
-                value: 0,
+                value: 20,
                 min: 0,
                 max: 50,
                 title: "Temperature (°C)",
                 label: "°C"
             });
-
+    
             var humidityGauge = new JustGage({
                 id: "humidityGauge",
-                value: 0,
+                value: 20,
                 min: 0,
                 max: 100,
                 title: "Humidity (%)",
                 label: "%"
             });
-
-            function updateGauges(temperature, humidity) {
-                if (!isNaN(temperature) && !isNaN(humidity)) {
-                    tempGauge.refresh(temperature);
-                    humidityGauge.refresh(humidity);
-                } else {
-                    console.error("Received invalid temperature or humidity data");
-                }
-            }
-
-            setInterval(async () => {
+    
+            async function updateGauges() {
                 try {
-                    const response = await fetch('/data');
+                    const response = await fetch('http://127.0.0.1:5001/data');
                     const data = await response.json();
-                    updateGauges(data.temperature, data.humidity);
+    
+                    if (data.temperature !== undefined && data.humidity !== undefined) {
+                        tempGauge.refresh(data.temperature);
+                        humidityGauge.refresh(data.humidity);
+                    } else {
+                        console.error('Invalid data received:', data);
+                    }
                 } catch (error) {
                     console.error('Error fetching data:', error);
                 }
-            }, 5000);
-            
-            setInterval(async () => {
-                try {
-                    const response = await fetch('/fan/status');
-                    const data = await response.json();
-                    updateFanImage(data.fan_status);
-                } catch (error) {
-                    console.error('Error fetching fan status:', error);
-                }
-            }, 5000);
+            }
+    
+            // Call updateGauges every 5 seconds
+            setInterval(updateGauges, 5000);
         });
     </script>
+    
 </body>
 </html>
