@@ -55,11 +55,9 @@ def send_email(temperature):
         server.quit()
     except Exception as e:
         print(f"Error sending email: {e}")
-# Global variable to track motor state
-motor_running = False
 
 def check_email_response():
-    global email_sent, motor_running
+    global email_sent
     while True:
         try:
             mail = imaplib.IMAP4_SSL('imap.gmail.com')
@@ -95,14 +93,12 @@ def check_email_response():
                             if 'Re: Temperature Alert' in mail_subject and mail_from == 'Melissa Weller <' + to_addrs + '>':
                                 if 'yes' in mail_content.lower():
                                     GPIO.output(Motor1, GPIO.HIGH)  # Start the motor
-                                    GPIO.output(Motor2, GPIO.LOW)
-                                    GPIO.output(Motor3, GPIO.HIGH)
-                                    motor_running = True
+                                    GPIO.output(Motor2, GPIO.HIGH)
+                                    GPIO.output(Motor3, GPIO.LOW)
                                     print("Fan turned ON based on email response.")
                                 elif 'no' in mail_content.lower():
                                     GPIO.output(Motor1, GPIO.LOW)  # Stop the motor
-                                    motor_running = False
-                                    print("Fan turned OFF based on email response.")
+                                    print("Fan is OFF based on email response.")
                                     email_sent = False 
 
             mail.logout()
@@ -116,7 +112,6 @@ def index():
     global led_status
     motor_status = GPIO.input(Motor1)
     fan_status = motor_status == GPIO.HIGH 
-    print(motor_status)
     return render_template('index.html', fan_status=fan_status)
 
 @app.route('/data')
@@ -142,14 +137,14 @@ def data():
         print(f"Exception in /data route: {e}")
         return jsonify({'error': str(e)}), 500
 
-# @app.route('/toggle', methods=['POST'])
-# def toggle():
-#     global led_status
+@app.route('/toggle', methods=['POST'])
+def toggle():
+    global led_status
 
-#     led_status = not led_status
-#     GPIO.output(LED_PIN, GPIO.HIGH if led_status else GPIO.LOW)
+    led_status = not led_status
+    GPIO.output(LED_PIN, GPIO.HIGH if led_status else GPIO.LOW)
     
-#     return render_template('index.html', led_status=led_status)
+    return render_template('index.html', led_status=led_status)
 
 @app.route('/fan/status')
 def fan_status():
