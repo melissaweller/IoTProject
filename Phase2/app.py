@@ -95,6 +95,8 @@ def check_email_response():
                             if 'Re: Temperature Alert' in mail_subject and mail_from == 'Melissa Weller <' + to_addrs + '>':
                                 if 'yes' in mail_content.lower():
                                     GPIO.output(Motor1, GPIO.HIGH)  # Start the motor
+                                    GPIO.output(Motor2, GPIO.LOW)
+                                    GPIO.output(Motor3, GPIO.HIGH)
                                     motor_running = True
                                     print("Fan turned ON based on email response.")
                                 elif 'no' in mail_content.lower():
@@ -114,7 +116,8 @@ def index():
     global led_status
     motor_status = GPIO.input(Motor1)
     fan_status = motor_status == GPIO.HIGH 
-    return render_template('index.html', fan_status=fan_status, led_status=led_status)
+    print(motor_status)
+    return render_template('index.html', fan_status=fan_status)
 
 @app.route('/data')
 def data():
@@ -139,14 +142,14 @@ def data():
         print(f"Exception in /data route: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/toggle', methods=['POST'])
-def toggle():
-    global led_status
+# @app.route('/toggle', methods=['POST'])
+# def toggle():
+#     global led_status
 
-    led_status = not led_status
-    GPIO.output(LED_PIN, GPIO.HIGH if led_status else GPIO.LOW)
+#     led_status = not led_status
+#     GPIO.output(LED_PIN, GPIO.HIGH if led_status else GPIO.LOW)
     
-    return render_template('index.html', led_status=led_status)
+#     return render_template('index.html', led_status=led_status)
 
 @app.route('/fan/status')
 def fan_status():
