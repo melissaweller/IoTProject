@@ -4,6 +4,8 @@ from email.mime.text import MIMEText
 from datetime import datetime
 from flask import Flask, jsonify, render_template
 import RPi.GPIO as GPIO
+import email
+import imaplib
 
 app = Flask(__name__)
 
@@ -33,12 +35,8 @@ GPIO.setup(LED_PIN, GPIO.OUT)
 def on_message(client, userdata, msg):
     global light_value, led_status, email_sent
 
-    try:
-        # Log the message received
-        print(f"Message received on topic {msg.topic}: {msg.payload.decode()}")
-        
+    try:     
         light_value = int(msg.payload.decode())
-        print(f"Decoded Light Intensity: {light_value}")
         
         if light_value < 400:
             led_status = True
@@ -73,7 +71,6 @@ mqtt_client.loop_start()
 
 # Send email function
 def send_email():
-    print("Sending email...")  # Add this line to debug
     now = datetime.now()
     time_str = now.strftime("%H:%M")
     message = MIMEText(f"The Light is ON at {time_str}.")
@@ -82,14 +79,13 @@ def send_email():
     message['To'] = to_addrs
 
     try:
-        server = smtplib.SMTP(smtp_ssl_host, smtp_ssl_port)
+        server = smtplib.SMTP_SSL(smtp_ssl_host, smtp_ssl_port)
         server.login(username, password)
         server.sendmail(from_addr, to_addrs, message.as_string())
         server.quit()
         print("Email sent successfully.")
     except Exception as e:
         print(f"Error sending email: {e}")
-
 
 # Flask Routes
 @app.route('/')
