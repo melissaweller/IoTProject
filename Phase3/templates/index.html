@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8"> 
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
     <link rel="stylesheet" href="/static/styles.css">
@@ -16,60 +16,41 @@
     
     <section class="container">
         <div class="card">
-            <form method="POST" action="/toggle">
-                <div class="image-container">
-                    {% if led_status %}
-                        <button type="submit" title="Turn Off LED">
-                            <img src="/static/switch_off.jpeg" alt="Turn Off Switch">
-                        </button>
-                        <img src="/static/light_on.png" alt="Light Bulb On">
-                    {% else %}
-                        <button type="submit" title="Turn On LED">
-                            <img src="/static/switch_on.jpeg" alt="Turn On Switch">
-                        </button>
-                        <img src="/static/light_off.png" alt="Light Bulb Off">
-                    {% endif %}
-                </div>
-            </form>
+            <!-- Light Bulb Image -->
+            <div class="image-container">
+                {% if led_status %}
+                    <img src="/static/light_on.png" alt="Light Bulb On" class="light-bulb">
+                {% else %}
+                    <img src="/static/light_off.png" alt="Light Bulb Off" class="light-bulb">
+                {% endif %}
+            </div>
         </div>
 
         <div id="gauges-fan" class="gauges-fan-container">
-            <!-- Temperature Gauge -->
             <div class="gauge-container">
                 <h2>Temperature</h2>
                 <div id="tempGauge" class="gauge"></div>
             </div>
 
-            <!-- Humidity Gauge -->
             <div class="gauge-container">
                 <h2>Humidity</h2>
                 <div id="humidityGauge" class="gauge"></div>
             </div>
 
-            <!-- Fan Control -->
             <div class="gauge-container">
                 <h2>Fan</h2>
-                    {% if fan_status %}
-                        <img src="/static/fan_on.png" alt="Fan On" class="fan-image">
-                    {% else %}
-                        <img src="/static/fan_off.png" alt="Fan Off" class="fan-image">
-                    {% endif %}
+                {% if fan_status %}
+                    <img src="/static/fan_on.png" alt="Fan On" class="fan-image">
+                {% else %}
+                    <img src="/static/fan_off.png" alt="Fan Off" class="fan-image">
+                {% endif %}
             </div>
         </div>
     </section>
 
     <script>
         $(document).ready(function() {
-            $('#toggle-button').click(function(event) {
-                event.preventDefault(); 
-                $.post('/toggle', function() {
-                    $.getJSON('/status', function(data) {
-                        $('#toggle-button img').attr('src', data.led_status ? '/static/switch_off.jpeg' : '/static/switch_on.jpeg');
-                        $('.light-bulb').attr('src', data.led_status ? '/static/light_on.png' : '/static/light_off.png');
-                    });
-                });
-            });
-    
+            // Initialize the gauges
             var tempGauge = new JustGage({
                 id: "tempGauge",
                 value: 0,
@@ -78,7 +59,7 @@
                 title: "Temperature (°C)",
                 label: "°C"
             });
-    
+
             var humidityGauge = new JustGage({
                 id: "humidityGauge",
                 value: 0,
@@ -87,27 +68,46 @@
                 title: "Humidity (%)",
                 label: "%"
             });
-    //Make sure when running file, click the right IP address or else it wont update
+
+            // Function to update light status from backend
+            async function updateLightStatus() {
+                try {
+                    const response = await fetch('/status');
+                    const data = await response.json();
+                    console.log('Light status:', data);  // Debugging line to check status response
+
+                    // Update light bulb image based on LED status
+                    if (data.led_status) {
+                        $('.light-bulb').attr('src', '/static/light_on.png');
+                    } else {
+                        $('.light-bulb').attr('src', '/static/light_off.png');
+                    }
+                } catch (error) {
+                    console.error('Error fetching light status:', error);
+                }
+            }
+
+
+            // Poll every 2 seconds for light status updates
+            setInterval(updateLightStatus, 2000);
+
+            // Update gauges every 5 seconds
             async function updateGauges() {
                 try {
-                    const response = await fetch('http://127.0.0.1:5001/data');
+                    const response = await fetch('/data');
                     const data = await response.json();
-    
+
                     if (data.temperature !== undefined && data.humidity !== undefined) {
                         tempGauge.refresh(data.temperature);
                         humidityGauge.refresh(data.humidity);
-                    } else {
-                        console.error('Invalid data received:', data);
                     }
                 } catch (error) {
                     console.error('Error fetching data:', error);
                 }
             }
-    
-            // Call updateGauges every 5 seconds
+
             setInterval(updateGauges, 5000);
         });
     </script>
-    
 </body>
 </html>
