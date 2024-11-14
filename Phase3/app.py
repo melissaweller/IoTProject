@@ -2,6 +2,12 @@ import paho.mqtt.client as mqtt
 import smtplib
 from email.mime.text import MIMEText
 from datetime import datetime
+from flask import Flask, jsonify, render_template
+import email
+import imaplib
+import RPi.GPIO as GPIO
+
+app = Flask(__name__)
 
 # MQTT Settings
 broker = "localhost"  # Mosquitto broker running on RPi
@@ -46,6 +52,10 @@ def send_email():
     except Exception as e:
         print(f"Error sending email: {e}")
 
+@app.route('/')
+def index():
+    return render_template('index.html')
+
 # MQTT setup
 client = mqtt.Client()
 client.on_message = on_message
@@ -53,3 +63,11 @@ client.connect(broker, 1883, 60)
 client.subscribe(topic)
 
 client.loop_start()
+
+if __name__ == '__main__':
+    try:
+        app.run(host='0.0.0.0', port=5001, debug=True)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        GPIO.cleanup()

@@ -1,0 +1,55 @@
+/* General Styles */
+body {font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f4f4f9;
+        margin: 0;
+        padding: 0;
+        text-align: center;}
+
+header {background-color: #007BFF;
+        color: white;
+        padding: 20px;
+        box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);}
+    
+h1 {margin: 0;
+        font-size: 2.5rem;}
+    
+.container {margin: 30px auto;
+        max-width: 1200px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 30px;}
+    
+.card {background-color: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        width: 80%;
+        max-width: 600px;}
+    
+.gauges-fan-container {display: flex;
+        justify-content: space-evenly;
+        width: 100%;
+        max-width: 900px;
+        gap: 20px;}
+    
+.gauge-container {background-color: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        text-align: center;}
+    
+.gauge {width: 200px;
+        height: 200px;}
+    
+img {width: 100px;
+        height: auto;}
+    
+.switch-button {background: none;
+        border: none;
+        cursor: pointer;
+        outline: none;
+        transition: transform 0.3s ease;}
+
+.fan-image {width: 150px;
+        height: auto;}
