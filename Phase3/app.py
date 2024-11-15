@@ -4,115 +4,82 @@ from email.mime.text import MIMEText
 from datetime import datetime
 from flask import Flask, jsonify, render_template
 import RPi.GPIO as GPIO
-import email
-import imaplib
+import os
 
 app = Flask(__name__)
 
-# MQTT Settings
-broker = "10.0.0.89"  # IP address of your Raspberry Pi running Mosquitto broker
-topic = "home/light/intensity"
+# Load environment variables for security (recommended way for credentials)
+SMTP_USERNAME = os.getenv('SMTP_USERNAME', 'iotproject87@gmail.com')
+SMTP_PASSWORD = os.getenv('SMTP_PASSWORD')  # Ensure this is loaded securely
+SMTP_SSL_HOST = 'smtp.gmail.com'
+SMTP_SSL_PORT = 465
+FROM_ADDR = SMTP_USERNAME
+TO_ADDRS = 'testingsample2003@gmail.com'
 
-# Email Settings
-smtp_ssl_host = 'smtp.gmail.com'
-smtp_ssl_port = 465
-username = 'iotproject87@gmail.com'
-password = 'kxro xgri kvhb jbdq'  # App password, not your Gmail account password
-from_addr = 'iotproject87@gmail.com'
-to_addrs = 'testingsample2003@gmail.com'
-
-# Initialize variables
-light_value = 0
-led_status = False
-email_sent = False
-
-# LED pin setup (assuming LED is connected to GPIO17)
-LED_PIN = 17
+# GPIO setup (assuming a default pin setup; modify as needed)
+LED_PIN = 25  # Example GPIO pin for LED
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(LED_PIN, GPIO.OUT)
 
-# Global variables to be updated by the MQTT callback
+# MQTT Settings
+BROKER = "localhost"  # Ensure Mosquitto broker is correctly configured
+TOPIC = "home/light/intensity"
+
+# Callback for when a message is received
 def on_message(client, userdata, msg):
-    global light_value, led_status, email_sent
-
-    try:     
+    try:
         light_value = int(msg.payload.decode())
-        
-        if light_value < 400:
-            led_status = True
+        print(f"Received Light Intensity Value: {light_value}")  # Log the received value
+
+        if light_value < 100:
+            print("Light value is very low.")
+            # Additional actions for very low light intensity (e.g., warning)
+        elif light_value < 400:
+            # Turn on LED
             GPIO.output(LED_PIN, GPIO.HIGH)
-            if not email_sent:
-                send_email()
-                email_sent = True
+            print("Turning on the LED (light value below 400)")
+            
+            # Send email notification
+            send_email()
         else:
-            led_status = False
-            GPIO.output(LED_PIN, GPIO.LOW) 
-            email_sent = False
+            # Turn off LED
+            GPIO.output(LED_PIN, GPIO.LOW)
+            print("Turning off the LED (light value 400 or above)")
 
-    except Exception as e:
-        print(f"Error processing MQTT message: {e}")
+    except ValueError as e:
+        print(f"Error processing message: {e}")
 
-
-def on_connect(client, userdata, flags, rc):
-    if rc == 0:
-        print("Connected to MQTT Broker!")
-        client.subscribe(topic)
-        print(f"Subscribed to topic: {topic}")
-    else:
-        print(f"Failed to connect with result code {rc}")
-
-# Connect to MQTT
-mqtt_client = mqtt.Client()
-mqtt_client.on_connect = on_connect
-mqtt_client.on_message = on_message
-mqtt_client.connect(broker, 1883, 60)
-mqtt_client.subscribe(topic)
-mqtt_client.loop_start()
-
-# Send email function
+# Send email
 def send_email():
     now = datetime.now()
     time_str = now.strftime("%H:%M")
     message = MIMEText(f"The Light is ON at {time_str}.")
     message['Subject'] = "Light Status Notification"
-    message['From'] = from_addr
-    message['To'] = to_addrs
-
+    message['From'] = FROM_ADDR
+    message['To'] = TO_ADDRS
+    
     try:
-        server = smtplib.SMTP_SSL(smtp_ssl_host, smtp_ssl_port)
-        server.login(username, password)
-        server.sendmail(from_addr, to_addrs, message.as_string())
-        server.quit()
-        print("Email sent successfully.")
+        with smtplib.SMTP_SSL(SMTP_SSL_HOST, SMTP_SSL_PORT) as server:
+            server.login(SMTP_USERNAME, SMTP_PASSWORD)
+            server.sendmail(FROM_ADDR, TO_ADDRS, message.as_string())
+        print("Email sent successfully")
     except Exception as e:
         print(f"Error sending email: {e}")
 
-# Flask Routes
 @app.route('/')
 def index():
-    # Render the index page with current status
-    return render_template('index.html', light_value=light_value, led_status=led_status, email_sent=email_sent)
+    return render_template('index.html')
 
-@app.route('/status')
-def status():
-    # Return current LED status and light intensity as JSON
-    return jsonify({
-        'led_status': led_status,
-        'light_value': light_value
-    })
-
-@app.route('/data')
-def get_data():
-    # Placeholder data for temperature and humidity (update as needed)
-    data = {
-        "temperature": 22,  # Placeholder value
-        "humidity": 50,     # Placeholder value
-    }
-    return jsonify(data)
+# MQTT setup
+client = mqtt.Client()
+client.on_message = on_message
+client.connect(BROKER, 1883, 60)
+client.subscribe(TOPIC)
+client.loop_start()
 
 if __name__ == '__main__':
     try:
-        app.run(host='0.0.0.0', port=5000, debug=True)
+        app.run(host='0.0.0.0', port=5001, debug=True)
     except KeyboardInterrupt:
         pass
     finally:
