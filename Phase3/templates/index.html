@@ -18,32 +18,15 @@
         <div class="card">
             <!-- Light Bulb Image -->
             <div class="image-container">
-                {% if led_status %}
-                    <img src="/static/light_on.png" alt="Light Bulb On" class="light-bulb">
-                {% else %}
-                    <img src="/static/light_off.png" alt="Light Bulb Off" class="light-bulb">
-                {% endif %}
+                <img src="/static/light_off.png" alt="Light Bulb" class="light-bulb" id="lightBulb">
             </div>
-        </div>
-
-        <div id="gauges-fan" class="gauges-fan-container">
-            <div class="gauge-container">
-                <h2>Temperature</h2>
-                <div id="tempGauge" class="gauge"></div>
+            <div id="lightIntensityGauge" class="gauge-container">
+                <h2>Light Intensity</h2>
+                <div id="intensityGauge" class="gauge"></div>
             </div>
-
-            <div class="gauge-container">
-                <h2>Humidity</h2>
-                <div id="humidityGauge" class="gauge"></div>
-            </div>
-
-            <div class="gauge-container">
-                <h2>Fan</h2>
-                {% if fan_status %}
-                    <img src="/static/fan_on.png" alt="Fan On" class="fan-image">
-                {% else %}
-                    <img src="/static/fan_off.png" alt="Fan Off" class="fan-image">
-                {% endif %}
+            <div id="emailStatus" class="email-status">
+                <h3>Email Sent Status:</h3>
+                <p id="emailTimestamp">No email sent</p>
             </div>
         </div>
     </section>
@@ -51,62 +34,47 @@
     <script>
         $(document).ready(function() {
             // Initialize the gauges
-            var tempGauge = new JustGage({
-                id: "tempGauge",
+            var intensityGauge = new JustGage({
+                id: "intensityGauge",
                 value: 0,
                 min: 0,
-                max: 50,
-                title: "Temperature (°C)",
-                label: "°C"
+                max: 1000,
+                title: "Light Intensity",
+                label: "Lux"
             });
 
-            var humidityGauge = new JustGage({
-                id: "humidityGauge",
-                value: 0,
-                min: 0,
-                max: 100,
-                title: "Humidity (%)",
-                label: "%"
-            });
-
-            // Function to update light status from backend
-            async function updateLightStatus() {
+            // Function to update light status and gauge data from backend
+            async function updateStatus() {
                 try {
                     const response = await fetch('/status');
                     const data = await response.json();
-                    console.log('Light status:', data);  // Debugging line to check status response
+                    console.log('Status data:', data);  // Debugging line
 
                     // Update light bulb image based on LED status
                     if (data.led_status) {
-                        $('.light-bulb').attr('src', '/static/light_on.png');
+                        $('#lightBulb').attr('src', '/static/light_on.png');
                     } else {
-                        $('.light-bulb').attr('src', '/static/light_off.png');
+                        $('#lightBulb').attr('src', '/static/light_off.png');
+                    }
+
+                    // Update gauge with the light intensity value
+                    if (data.light_intensity !== undefined) {
+                        intensityGauge.refresh(data.light_intensity);
+                    }
+
+                    // Display the last email timestamp if available
+                    if (data.email_sent_time) {
+                        $('#emailTimestamp').text(`Last email sent at: ${data.email_sent_time}`);
+                    } else {
+                        $('#emailTimestamp').text('No email sent');
                     }
                 } catch (error) {
-                    console.error('Error fetching light status:', error);
+                    console.error('Error fetching status:', error);
                 }
             }
 
-
-            // Poll every 2 seconds for light status updates
-            setInterval(updateLightStatus, 2000);
-
-            // Update gauges every 5 seconds
-            async function updateGauges() {
-                try {
-                    const response = await fetch('/data');
-                    const data = await response.json();
-
-                    if (data.temperature !== undefined && data.humidity !== undefined) {
-                        tempGauge.refresh(data.temperature);
-                        humidityGauge.refresh(data.humidity);
-                    }
-                } catch (error) {
-                    console.error('Error fetching data:', error);
-                }
-            }
-
-            setInterval(updateGauges, 5000);
+            // Poll every 2 seconds for updates
+            setInterval(updateStatus, 2000);
         });
     </script>
 </body>
