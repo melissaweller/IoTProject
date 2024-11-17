@@ -3,14 +3,13 @@
 
 // Wi-Fi settings for school
 //const char* ssid = "TP-Link_2AD8";
-//const char* password = "14730078";
+// const char* password = "14730078";
 
-// Wi-Fi settings for home
-const char* ssid = "TP-Link_2AD8";
-const char* password = "14730078m";
+const char* ssid = "Helix-GW";
+const char* password = "miagw0707";
 
 // MQTT Broker settings
-const char* mqtt_server = "127.0.0.1";        
+const char* mqtt_server = "10.0.0.89";        
 const char* mqtt_topic = "home/light/intensity";
 
 // Pins

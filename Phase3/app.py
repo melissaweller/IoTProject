@@ -15,14 +15,10 @@ SMTP_SSL_HOST = 'smtp.gmail.com'
 SMTP_SSL_PORT = 465
 FROM_ADDR = SMTP_USERNAME
 TO_ADDRS = 'testingsample2003@gmail.com'
-
-# GPIO setup
-LED_PIN = 25
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(LED_PIN, GPIO.OUT)
+email_sent = False
 
 # MQTT Settings
-BROKER = "localhost"
+BROKER = "10.0.0.89"
 TOPIC = "home/light/intensity"
 
 # Variables to track state
@@ -33,32 +29,39 @@ led_status = False
 
 # Callback for MQTT messages
 def on_message(client, userdata, msg):
-    global last_email_sent_time, light_intensity, led_status
+    global last_email_sent_time, light_intensity, led_status, email_sent
     try:
+        # Decode light intensity from message payload
         light_intensity = int(msg.payload.decode())
-        print(f"Received Light Intensity Value: {light_intensity}")
 
-        if light_intensity < 400:
-            GPIO.output(LED_PIN, GPIO.HIGH)
+        print(f"Received light intensity: {light_intensity}")
+
+        # If light intensity is below 400 and email has not been sent
+        if light_intensity < 400 and not email_sent:
+            # Set LED status to True (light is on)
             led_status = True
-            now = datetime.now()
-            if not last_email_sent_time or now - last_email_sent_time > EMAIL_DELAY:
-                send_email()
-                last_email_sent_time = now
-        else:
-            GPIO.output(LED_PIN, GPIO.LOW)
-            led_status = False
+            send_email()  # Send the email
+            email_sent = True  # Set flag to prevent further emails
+            last_email_sent_time = datetime.now()  # Record the time the email was sent
+            print("Email sent.")
+        elif light_intensity >= 400:
+            # Reset the email_sent flag if light intensity goes above threshold
+
+            led_status = False  # Turn LED off if light is above 400
+            email_sent = False  # Reset email_sent flag to allow sending the next email when intensity falls below 400
     except ValueError as e:
         print(f"Error processing message: {e}")
+
+
 
 # Email function
 def send_email():
     now = datetime.now()
     time_str = now.strftime("%H:%M")
     message = MIMEText(f"The Light is ON at {time_str}.")
-    message['Subject'] = "Light Status Notification"
-    message['From'] = FROM_ADDR
-    message['To'] = TO_ADDRS
+    message['subject'] = "Light Status Notification"
+    message['from'] = FROM_ADDR
+    message['to'] = TO_ADDRS
 
     try:
         with smtplib.SMTP_SSL(SMTP_SSL_HOST, SMTP_SSL_PORT) as server:
