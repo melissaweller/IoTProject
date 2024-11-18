@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.3.0/raphael.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/justgage/1.3.2/justgage.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Dashboard</h1>
+    </header>
+    
+    <main class="dashboard">
+        <!-- User Info Section -->
+        <section class="user-info">
+            <div class="profile-picture">
+                <img src="/static/user_avatar.jpg" alt="User Avatar">
+            </div>
+            <div class="user-details">
+                <p><strong>Username</strong></p>
+                <p>Favorites</p>
+                <p>Temperature: 25°C</p>
+                <p>Humidity: 45%</p>
+                <p>Light intensity: 300 Lux</p>
+                
+            </div>
+        </section>
+
+        <!-- Gauges Section -->
+        <section class="gauges">
+            <div class="gauge-container">
+                <h2>Temperature</h2>
+                <div id="tempGauge" class="gauge"></div>
+            </div>
+            <div class="gauge-container">
+                <h2>Humidity</h2>
+                <div id="humidityGauge" class="gauge"></div>
+            </div>
+            <div class="gauge-container">
+                <h2>Fan</h2>
+                <img src="/static/fan_off.png" alt="Fan Icon" height="150px" width="150px">
+            </div>
+        </section>
+
+        <section class="light">
+            <h2>Light</h2>
+            <div class="light-content">
+                <img src="/static/light_off.png" alt="Light Bulb" class="light-bulb" height="150px" width="150px">
+                <div class="gauge-container">
+                    <h3>Light Intensity</h3>
+                    <div id="intensityGauge" class="gauge"></div>
+                </div>
+            </div>
+            <h2>Email Status</h2>
+            <p id="emailTimestamp">Last email sent: No email sent</p>
+        </section>
+    </main>
+
+    <script>
+        $(document).ready(function() {
+            // Initialize the gauges
+            var tempGauge = new JustGage({
+                id: "tempGauge",
+                value: 0,
+                min: 0,
+                max: 50,
+                title: "Temperature (°C)"
+            });
+
+            var humidityGauge = new JustGage({
+                id: "humidityGauge",
+                value: 0,
+                min: 0,
+                max: 100,
+                title: "Humidity (%)"
+            });
+
+            var intensityGauge = new JustGage({
+                id: "intensityGauge",
+                value: 0,
+                min: 0,
+                max: 5000,
+                title: "Light Intensity",
+                label: "Lux"
+            });
+
+            // Update gauges periodically
+            setInterval(async function () {
+                try {
+                    const response = await fetch('/status');
+                    const data = await response.json();
+
+                    tempGauge.refresh(data.temperature);
+                    humidityGauge.refresh(data.humidity);
+                    intensityGauge.refresh(data.light_intensity);
+
+                    // Update email status
+                    if (data.email_sent_time) {
+                        $('#emailTimestamp').text(`Last email sent: ${data.email_sent_time}`);
+                    } else {
+                        $('#emailTimestamp').text('Last email sent: No email sent');
+                    }
+                } catch (error) {
+                    console.error('Error updating gauges:', error);
+                }
+            }, 5000);
+        });
+    </script>
+</body>
+</html>
