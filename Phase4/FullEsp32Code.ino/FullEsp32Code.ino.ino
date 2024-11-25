@@ -4,11 +4,14 @@
 #include <MFRC522.h>
 
 // Wi-Fi settings
-const char* ssid = "TP-Link_2AD8";
-const char* password = "14730078";
+// const char* ssid = "TP-Link_2AD8";
+// const char* password = "14730078";
+
+ const char* ssid = "DavidesiPhone";
+ const char* password = "who is joe";
 
 // MQTT Broker settings
-const char* mqtt_server = "192.168.2.81";        
+const char* mqtt_server = "172.20.10.7";        
 const char* mqtt_light_topic = "home/light/intensity"; // Topic for light intensity
 const char* mqtt_rfid_topic = "home/rfid/tag";         // Topic for RFID data
 

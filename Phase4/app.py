@@ -31,8 +31,9 @@ DHT_PIN = 17
 dht_sensor = DHT(DHT_PIN)
 
 # MQTT Settings
-BROKER = "192.168.0.144"
+BROKER = "172.20.10.7"
 TOPIC = "home/light/intensity"
+TOPIC2 = "home/rfid/tag"
 
 # Variables to track state
 last_email_sent_time = None
@@ -47,9 +48,9 @@ def on_message(client, userdata, msg):
     global last_email_sent_time, light_intensity, led_status, email_sent
     try:
         # Decode light intensity from message payload
-        light_intensity = int(msg.payload.decode())
+        rfid_code = str(msg.payload.decode())
 
-        print(f"Received light intensity: {light_intensity}")
+        print(f"Received code: {rfid_code}")
 
         # Control LED and send email if needed based on light intensity
         if light_intensity < 400 and not email_sent:
@@ -121,6 +122,7 @@ client = mqtt.Client()
 client.on_message = on_message
 client.connect(BROKER, 1883, 60)
 client.subscribe(TOPIC)
+client.subscribe(TOPIC2)
 client.loop_start()
 
 # Start DHT sensor thread
