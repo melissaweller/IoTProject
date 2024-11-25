@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import RPi.GPIO as GPIO
 import os
 import threading
-import Adafruit_DHT  # Assumes you are using the DHT library for temperature/humidity
+from Freenove_DHT import DHT
 
 app = Flask(__name__)
 
@@ -17,7 +17,7 @@ SMTP_SSL_HOST = 'smtp.gmail.com'
 SMTP_SSL_PORT = 465
 FROM_ADDR = SMTP_USERNAME
 TO_ADDRS = 'testingsample2003@gmail.com'
-email_sent = False
+email_sent = False 
 
 # GPIO setup
 GPIO.setmode(GPIO.BCM)
@@ -27,11 +27,11 @@ GPIO.setup(LED_PIN, GPIO.OUT)
 GPIO.setup(FAN_PIN, GPIO.OUT)
 
 # DHT11 sensor setup
-DHT_SENSOR = Adafruit_DHT.DHT11
-DHT_PIN = 4  # Replace with the correct pin for your setup
+DHT_PIN = 17
+dht_sensor = DHT(DHT_PIN)
 
 # MQTT Settings
-BROKER = "10.0.0.89"
+BROKER = "192.168.0.144"
 TOPIC = "home/light/intensity"
 
 # Variables to track state
@@ -63,18 +63,27 @@ def on_message(client, userdata, msg):
     except ValueError as e:
         print(f"Error processing message: {e}")
 
-# Function to read DHT11 data
 def read_dht_sensor():
     global temperature, humidity
-    while True:
-        humidity, temperature = Adafruit_DHT.read_retry(DHT_SENSOR, DHT_PIN)
-        if temperature is not None and humidity is not None:
-            # Control the fan based on temperature threshold (example threshold: 30°C)
-            if temperature > 30:
-                GPIO.output(FAN_PIN, GPIO.HIGH)
+    try:
+        result = dht_sensor.readDHT11()
+        if result == 0:
+            humidity = dht_sensor.getHumidity()
+            temperature = dht_sensor.getTemperature()
+            print(f"Temperature: {temperature}, Humidity: {humidity}")
+            if temperature is not None and humidity is not None:
+                if temperature > 20 and not email_sent:
+                    send_email(temperature)
+                    email_sent = True
+                return jsonify({'temperature': temperature, 'humidity': humidity})
             else:
-                GPIO.output(FAN_PIN, GPIO.LOW)
-        threading.Event().wait(2)  # Poll every 2 seconds
+                return jsonify({'error': 'Failed to read from sensor'}), 500
+        else:
+            print("DHT read failed.")
+            return jsonify({'error': 'Failed to read from sensor'}), 500
+    except Exception as e:
+        print(f"Exception in /data route: {e}")
+        return jsonify({'error': str(e)}), 500
 
 # Email function
 def send_email(subject):

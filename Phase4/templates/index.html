@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IoT Dashboard</title>
+    <title>Dashboard</title>
     <link rel="stylesheet" href="/static/styles.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.3.0/raphael.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/justgage/1.3.2/justgage.min.js"></script>
@@ -11,56 +11,103 @@
 </head>
 <body>
     <header>
-        <h1>IoT Dashboard</h1>
+        <h1>Dashboard</h1>
     </header>
     
-    <section class="container">
-        <div class="card">
-            <h2>Light Intensity Monitoring</h2>
-            <div class="image-container">
-                <img src="/static/light_off.png" alt="Light Bulb" class="light-bulb" id="lightBulb">
+    <main class="dashboard">
+        <!-- User Info Section -->
+        <section class="user-info">
+            <div class="profile-picture">
+                <img src="/static/user_avatar.jpg" alt="User Avatar">
             </div>
-            <div id="lightIntensityGauge" class="gauge-container">
-                <div id="intensityGauge" class="gauge"></div>
+            <div class="user-details">
+                <p><strong>Username</strong></p>
+                <p>Favorites</p>
+                <p>Temperature: 25°C</p>
+                <p>Humidity: 45%</p>
+                <p>Light intensity: 300 Lux</p>
+                
             </div>
-            <div id="emailStatus" class="email-status">
-                <h3>Email Sent Status:</h3>
-                <p id="emailTimestamp">No email sent</p>
-            </div>
-        </div>
-        <div class="card">
-            <h2>Temperature & Humidity</h2>
-            <div id="temperatureGauge" class="gauge-container">
+        </section>
+
+        <!-- Gauges Section -->
+        <section class="gauges">
+            <div class="gauge-container">
+                <h2>Temperature</h2>
                 <div id="tempGauge" class="gauge"></div>
             </div>
-            <div id="humidityGauge" class="gauge-container">
-                <div id="humidityGaugeEl" class="gauge"></div>
+            <div class="gauge-container">
+                <h2>Humidity</h2>
+                <div id="humidityGauge" class="gauge"></div>
             </div>
-        </div>
-    </section>
+            <div class="gauge-container">
+                <h2>Fan</h2>
+                <img src="/static/fan_off.png" alt="Fan Icon" height="150px" width="150px">
+            </div>
+        </section>
+
+        <section class="light">
+            <h2>Light</h2>
+            <div class="light-content">
+                <img src="/static/light_off.png" alt="Light Bulb" class="light-bulb" height="150px" width="150px">
+                <div class="gauge-container">
+                    <h3>Light Intensity</h3>
+                    <div id="intensityGauge" class="gauge"></div>
+                </div>
+            </div>
+            <h2>Email Status</h2>
+            <p id="emailTimestamp">Last email sent: No email sent</p>
+        </section>
+    </main>
 
     <script>
         $(document).ready(function() {
-            var intensityGauge = new JustGage({ id: "intensityGauge", value: 0, min: 0, max: 5000, title: "Light Intensity", label: "Lux" });
-            var tempGauge = new JustGage({ id: "tempGauge", value: 0, min: 0, max: 50, title: "Temperature", label: "°C" });
-            var humidityGauge = new JustGage({ id: "humidityGaugeEl", value: 0, min: 0, max: 100, title: "Humidity", label: "%" });
+            // Initialize the gauges
+            var tempGauge = new JustGage({
+                id: "tempGauge",
+                value: 0,
+                min: 0,
+                max: 50,
+                title: "Temperature (°C)"
+            });
 
-            async function updateStatus() {
+            var humidityGauge = new JustGage({
+                id: "humidityGauge",
+                value: 0,
+                min: 0,
+                max: 100,
+                title: "Humidity (%)"
+            });
+
+            var intensityGauge = new JustGage({
+                id: "intensityGauge",
+                value: 0,
+                min: 0,
+                max: 5000,
+                title: "Light Intensity",
+                label: "Lux"
+            });
+
+            // Update gauges periodically
+            setInterval(async function () {
                 try {
                     const response = await fetch('/status');
                     const data = await response.json();
 
-                    if (data.led_status) { $('#lightBulb').attr('src', '/static/light_on.png'); }
-                    else { $('#lightBulb').attr('src', '/static/light_off.png'); }
+                    tempGauge.refresh(data.temperature);
+                    humidityGauge.refresh(data.humidity);
+                    intensityGauge.refresh(data.light_intensity);
 
-                    if (data.light_intensity !== undefined) { intensityGauge.refresh(data.light_intensity); }
-                    if (data.temperature !== undefined) { tempGauge.refresh(data.temperature); }
-                    if (data.humidity !== undefined) { humidityGauge.refresh(data.humidity); }
-                    if (data.email_sent_time) { $('#emailTimestamp').text(`Last email sent at: ${data.email_sent_time}`); }
-                    else { $('#emailTimestamp').text('No email sent'); }
-                } catch (error) { console.error('Error fetching status:', error); }
-            }
-            setInterval(updateStatus, 2000);
+                    // Update email status
+                    if (data.email_sent_time) {
+                        $('#emailTimestamp').text(`Last email sent: ${data.email_sent_time}`);
+                    } else {
+                        $('#emailTimestamp').text('Last email sent: No email sent');
+                    }
+                } catch (error) {
+                    console.error('Error updating gauges:', error);
+                }
+            }, 5000);
         });
     </script>
 </body>
