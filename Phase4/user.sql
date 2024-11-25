@@ -20,4 +20,4 @@ INSERT INTO users (name, rfid_tag, light_intensity, temperature, humidity)
 VALUES ('Melissa', '', 400, 22.5, 45.0); 
 
 INSERT INTO users (name, rfid_tag, light_intensity, temperature, humidity)
-VALUES ('Davide', '', 200, 20, 45.0); 
+VALUES ('Davide', 'd3:98:db:0f', 200, 20, 45.0); 

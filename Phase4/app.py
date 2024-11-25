@@ -7,7 +7,8 @@ import RPi.GPIO as GPIO
 import os
 import threading
 from Freenove_DHT import DHT
-
+import mysql.connector
+from mysql.connector import Error
 app = Flask(__name__)
 
 # Load environment variables for security (recommended way for credentials)
@@ -31,7 +32,7 @@ DHT_PIN = 17
 dht_sensor = DHT(DHT_PIN)
 
 # MQTT Settings
-BROKER = "172.20.10.7"
+BROKER = "192.168.0.138"
 TOPIC = "home/light/intensity"
 TOPIC2 = "home/rfid/tag"
 
@@ -46,12 +47,32 @@ humidity = None
 # MQTT Callback for messages
 def on_message(client, userdata, msg):
     global last_email_sent_time, light_intensity, led_status, email_sent
+    rfid_id = msg.payload.decode()
+    print(f"RFID ID Received: {rfid_id}")
+
+    # Query the database for RFID information
     try:
-        # Decode light intensity from message payload
-        rfid_code = str(msg.payload.decode())
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)
+        query = "SELECT * FROM users WHERE rfid_id = %s"
+        cursor.execute(query, (rfid_id,))
+        user = cursor.fetchone()
 
-        print(f"Received code: {rfid_code}")
+        if user:
+            print(f"User Found: {user}")
+            # Optional: Use MQTT to publish the user data back to another topic
+            client.publish("home/rfid/userinfo", str(user))
+        else:
+            print("RFID not found in database.")
 
+    except Error as e:
+        print(f"Database error: {e}")
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
+
+    try:
         # Control LED and send email if needed based on light intensity
         if light_intensity < 400 and not email_sent:
             GPIO.output(LED_PIN, GPIO.HIGH)
