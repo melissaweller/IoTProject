@@ -1,108 +1,102 @@
 body {
-        font-family: Arial, sans-serif;
-        margin: 0;
-        padding: 0;
-        background-color: #f4f4f4;
-    }
-    
-    header {
-        text-align: center;
-        padding: 1rem;
-        background-color: #007BFF;
-        color: white;
-    }
-    
-    .dashboard {
-        display: grid;
-        grid-template-areas:
-            "user-info gauges"
-            "user-info light"
-            "user-info email-status"
-            "user-info mobile";
-        grid-template-columns: 1fr 2fr;
-        grid-gap: 20px;
-        padding: 20px;
-    }
-    
-    .user-info {
-        grid-area: user-info;
-        background-color: #007BFF;
-        color: white;
-        border-radius: 10px;
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-    
-    .profile-picture img {
-        width: 100px;
-        height: 100px;
-        border-radius: 50%;
-    }
-    
-    .user-details {
-        margin-top: 20px;
-        text-align: center;
-    }
-    
-    .gauges {
-        grid-area: gauges;
-        display: flex;
-        justify-content: space-around;
-        align-items: center;
-        background-color: white;
-        border-radius: 10px;
-        padding: 20px;
-    }
-    
-    .gauge-container {
-        text-align: center;
-    }
-    
-    .light {
-        grid-area: light;
-        background-color: white;
-        border-radius: 10px;
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-    
-    .light-content {
-        display: flex;
-        align-items: center;
-        justify-content: space-around;
-        width: 100%;
-    }
-    
-    .light-bulb {
-        height: auto;
-    }
-    
-    .gauge-container {
-        text-align: center;
-    }
-    
-    
-    .email-status {
-        grid-area: email-status;
-        background-color: white;
-        border-radius: 10px;
-        text-align: center;
-        padding: 20px;
-    }
-    
-    .mobile {
-        grid-area: mobile;
-        background-color: white;
-        border-radius: 10px;
-        text-align: center;
-        padding: 20px;
-    }
-    
-    .mobile img {
-        width: 100px;
-    }
-    
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+}
+
+header {
+    text-align: center;
+    padding: 1rem;
+    background-color: #007BFF;
+    color: white;
+}
+
+.dashboard {
+    display: grid;
+    grid-template-areas:
+        "user-info gauges"
+        "user-info light"
+        "user-info email-status"
+        "user-info mobile";
+    grid-template-columns: 1fr 2fr;
+    grid-gap: 20px;
+    padding: 20px;
+}
+
+.user-info {
+    grid-area: user-info;
+    background-color: #007BFF;
+    color: white;
+    border-radius: 10px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.profile-picture img {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+}
+
+.user-details {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.gauges {
+    grid-area: gauges;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    background-color: white;
+    border-radius: 10px;
+    padding: 20px;
+}
+
+.gauge-container {
+    text-align: center;
+}
+
+.light {
+    grid-area: light;
+    background-color: white;
+    border-radius: 10px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.light-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    width: 100%;
+}
+
+.light-bulb {
+    height: auto;
+}
+
+.email-status {
+    grid-area: email-status;
+    background-color: white;
+    border-radius: 10px;
+    text-align: center;
+    padding: 20px;
+}
+
+.mobile {
+    grid-area: mobile;
+    background-color: white;
+    border-radius: 10px;
+    text-align: center;
+    padding: 20px;
+}
+
+.mobile img {
+    width: 100px;
+}

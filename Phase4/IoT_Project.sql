@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- Insert a sample user (you can add more as needed)
 INSERT INTO users (name, rfid_tag, light_intensity, temperature, humidity)
-VALUES ('Melissa', '', 400, 22.5, 45.0); 
+VALUES ('Melissa', 'f3:49:ec:24', 400, 22.5, 45.0); 
 
 INSERT INTO users (name, rfid_tag, light_intensity, temperature, humidity)
 VALUES ('Davide', 'd3:98:db:0f', 200, 20, 45.0); 

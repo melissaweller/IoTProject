@@ -1,92 +1,229 @@
-from flask import Flask, jsonify, render_template
-import paho.mqtt.client as mqtt
-import smtplib
-from email.mime.text import MIMEText
+import json
 from datetime import datetime, timedelta
 import RPi.GPIO as GPIO
-import os
-import threading
-from Freenove_DHT import DHT
 import mysql.connector
-from mysql.connector import Error
+from flask import Flask, jsonify, render_template
+import paho.mqtt.client as mqtt
+import requests
+import smtplib
+from email.mime.text import MIMEText
+import email
+import imaplib
+import time
+from Freenove_DHT import DHT
+
 app = Flask(__name__)
 
-# Load environment variables for security (recommended way for credentials)
-SMTP_USERNAME = os.getenv('SMTP_USERNAME', 'iotproject87@gmail.com')
-SMTP_PASSWORD = 'eeka ftkg smpe qknf'  # Ensure this is loaded securely
-SMTP_SSL_HOST = 'smtp.gmail.com'
-SMTP_SSL_PORT = 465
-FROM_ADDR = SMTP_USERNAME
-TO_ADDRS = 'testingsample2003@gmail.com'
-email_sent = False 
-
-# GPIO setup
+# GPIO Setup
 GPIO.setmode(GPIO.BCM)
-LED_PIN = 17  # Example LED pin for controlling based on light intensity
-FAN_PIN = 18  # Example fan pin for DHT11 temperature control
-GPIO.setup(LED_PIN, GPIO.OUT)
-GPIO.setup(FAN_PIN, GPIO.OUT)
 
-# DHT11 sensor setup
+# DHT11 Setup
 DHT_PIN = 17
 dht_sensor = DHT(DHT_PIN)
 
-# MQTT Settings
-BROKER = "192.168.0.138"
-TOPIC = "home/light/intensity"
-TOPIC2 = "home/rfid/tag"
+# Motor setup
+Motor1 = 22  # Enable Pin
+Motor2 = 27  # Input Pin
+Motor3 = 23  # Input Pin
+GPIO.setup(Motor1, GPIO.OUT)
+GPIO.setup(Motor2, GPIO.OUT)
+GPIO.setup(Motor3, GPIO.OUT)
+GPIO.output(Motor1, GPIO.LOW)
 
-# Variables to track state
+# MQTT Settings
+BROKER = "10.0.0.89"  # Your MQTT Broker IP
+TOPIC_RFID = "home/rfid/tag"
+TOPIC_LIGHT = "home/light/intensity"
+TOPIC_LIGHT_CONTROL = "home/light/control"  # Topic to control the light (send command to ESP32)
+
+# Database connection setup
+def get_db_connection():
+    return mysql.connector.connect(
+        host="localhost",
+        user="IoT",  # DB username
+        password="password",  # DB password
+        database="IoT_Project"  # The name of your database
+    )
+
+# Email setup
+smtp_ssl_host = 'smtp.gmail.com'
+smtp_ssl_port = 465
+username = 'iotproject87@gmail.com'
+password = 'eeka ftkg smpe qknf'
+from_addr = 'iotproject87@gmail.com'
+to_addrs = 'testingsample2003@gmail.com'
+email_sent = False
+
+# Tracking Variables
+email_sent = False
 last_email_sent_time = None
-EMAIL_DELAY = timedelta(seconds=10)
 light_intensity = 0
-led_status = False
 temperature = None
 humidity = None
 
-# MQTT Callback for messages
+# Initialize MQTT Client
+mqtt_client = mqtt.Client()
+
 def on_message(client, userdata, msg):
-    global last_email_sent_time, light_intensity, led_status, email_sent
-    rfid_id = msg.payload.decode()
-    print(f"RFID ID Received: {rfid_id}")
-
-    # Query the database for RFID information
-    try:
-        connection = get_db_connection()
-        cursor = connection.cursor(dictionary=True)
-        query = "SELECT * FROM users WHERE rfid_id = %s"
-        cursor.execute(query, (rfid_id,))
-        user = cursor.fetchone()
-
-        if user:
-            print(f"User Found: {user}")
-            # Optional: Use MQTT to publish the user data back to another topic
-            client.publish("home/rfid/userinfo", str(user))
-        else:
-            print("RFID not found in database.")
-
-    except Error as e:
-        print(f"Database error: {e}")
-    finally:
-        if connection.is_connected():
-            cursor.close()
-            connection.close()
+    global light_intensity, email_sent, last_email_sent_time, temperature, humidity
 
     try:
-        # Control LED and send email if needed based on light intensity
-        if light_intensity < 400 and not email_sent:
-            GPIO.output(LED_PIN, GPIO.HIGH)
-            send_email("Light ON notification")
-            email_sent = True
-            last_email_sent_time = datetime.now()
-        elif light_intensity >= 400:
-            GPIO.output(LED_PIN, GPIO.LOW)
-            email_sent = False
-    except ValueError as e:
+        print(f"Received message on topic {msg.topic}: {msg.payload.decode()}")
+
+        if msg.topic == TOPIC_RFID:
+            rfid_code = msg.payload.decode()
+            response = requests.get(f"http://10.0.0.89:5001/get_user_favorites/{rfid_code}")
+
+            if response.status_code == 200:
+                user_data = response.json()
+
+                # Fetch user preferences with defaults
+                user_light_intensity = user_data.get('light_intensity', 300)
+                user_temperature = user_data.get('temperature', 25.0)
+                user_humidity = user_data.get('humidity', 45.0)
+
+                # Debugging: print out the user data
+                print(f"User data fetched: light_intensity = {user_light_intensity}, temperature = {user_temperature}, humidity = {user_humidity}")
+
+                # If light intensity is lower than the user's preference, send control command to ESP32
+                if light_intensity < user_light_intensity:
+                    print(f"Light intensity {light_intensity} is less than user's preferred {user_light_intensity}. Sending control signal to ESP32.")
+                    mqtt_client.publish(TOPIC_LIGHT_CONTROL, "ON")  # Turn on light via ESP32
+
+                # Control the Fan based on temperature
+                if temperature is not None and temperature > user_temperature:
+                    GPIO.output(Motor1, GPIO.HIGH)  # Turn on fan
+                    GPIO.output(Motor2, GPIO.HIGH)
+                    GPIO.output(Motor3, GPIO.LOW)
+                    print("Fan turned on due to high temperature.")
+                    if not email_sent:  # Send email only once
+                        send_email(temperature)
+                        email_sent = True
+                else:
+                    GPIO.output(Motor1, GPIO.LOW)  # Turn off fan if temp is lower
+                    GPIO.output(Motor2, GPIO.LOW)
+                    GPIO.output(Motor3, GPIO.LOW)
+                    print("Fan turned off due to normal temperature.")
+
+                # Control air conditioning (or other devices) based on humidity
+                if humidity is not None and humidity > user_humidity:
+                    print("Humidity is high, you might want to consider activating air conditioning.")
+                    # GPIO code for AC control can go here if needed.
+
+        elif msg.topic == TOPIC_LIGHT:
+            light_intensity = int(msg.payload.decode())  # Update light intensity from MQTT message
+            print(f"Light Intensity: {light_intensity}")
+
+    except Exception as e:
         print(f"Error processing message: {e}")
 
-def read_dht_sensor():
-    global temperature, humidity
+def send_email(temperature):
+    message = MIMEText(f"The current temperature is {temperature}°C. Would you like to turn on the fan?")
+    message['subject'] = 'Temperature Alert'
+    message['from'] = from_addr
+    message['to'] = to_addrs  
+
+    try:
+        server = smtplib.SMTP_SSL(smtp_ssl_host, smtp_ssl_port)
+        server.login(username, password)
+        server.sendmail(from_addr, to_addrs, message.as_string())
+        server.quit()
+    except Exception as e:
+        print(f"Error sending email: {e}")
+
+def check_email_response():
+    global email_sent
+    while True:
+        try:
+            mail = imaplib.IMAP4_SSL('imap.gmail.com')
+            mail.login(username, password)
+            mail.select('inbox')
+            status, data = mail.search(None, 'UNSEEN')  
+            mail_ids = []
+
+            for block in data:
+                mail_ids += block.split()
+
+            if mail_ids:
+                for i in mail_ids:
+                    status, data = mail.fetch(i, '(RFC822)')
+                    for response_part in data:
+                        if isinstance(response_part, tuple):
+                            message = email.message_from_bytes(response_part[1])
+                            mail_from = message['from']
+                            mail_subject = message['subject']
+                            mail_content = ""
+                            
+                            if message.is_multipart():
+                                for part in message.walk():
+                                    if part.get_content_type() == 'text/plain':
+                                        mail_content = part.get_payload(decode=True).decode()
+                            else:
+                                mail_content = message.get_payload(decode=True).decode()
+
+                            print(f'From: {mail_from}')
+                            print(f'Subject: {mail_subject}')
+                            print(f'Content: {mail_content}')
+
+                            if 'Re: Temperature Alert' in mail_subject and mail_from == 'Melissa Weller <' + to_addrs + '>':
+                                if 'yes' in mail_content.lower():
+                                    GPIO.output(Motor1, GPIO.HIGH)  # Start the motor
+                                    GPIO.output(Motor2, GPIO.HIGH)
+                                    GPIO.output(Motor3, GPIO.LOW)
+                                    print("Fan turned ON based on email response.")
+                                elif 'no' in mail_content.lower():
+                                    GPIO.output(Motor1, GPIO.LOW)  # Stop the motor
+                                    print("Fan is OFF based on email response.")
+                                    email_sent = False 
+
+            mail.logout()
+        except Exception as e:
+            print(f"Error checking email: {e}")
+
+        time.sleep(30)
+
+@app.route('/get_user_favorites/<rfid_tag>', methods=['GET'])
+def get_user_favorites(rfid_tag):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # SQL query to fetch user data based on the RFID tag
+    cursor.execute("SELECT * FROM users WHERE rfid_tag = %s", (rfid_tag,))
+    user = cursor.fetchone()
+
+    cursor.close()
+    conn.close()
+
+    if user:
+        # User found, return user data
+        return jsonify({
+            "name": user["name"],
+            "temperature": user["temperature"] or 25.0,  # default temperature if None
+            "humidity": user["humidity"] or 45.0,        # default humidity if None
+            "light_intensity": user["light_intensity"] or 300,  # default light intensity
+            "temperature_favorite": user["temperature"] or 25.0,
+            "light_intensity_favorite": user["light_intensity"] or 300
+        })
+    else:
+        # User not found
+        return jsonify({"error": "User not found"}), 404
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/status')
+def status():
+    return jsonify({
+        'light_intensity': light_intensity,
+        'temperature': temperature,
+        'humidity': humidity,
+        'email_sent_time': last_email_sent_time.strftime("%H:%M:%S") if last_email_sent_time else None
+    })
+
+@app.route('/data')
+def data():
+    global email_sent, temperature, humidity
     try:
         result = dht_sensor.readDHT11()
         if result == 0:
@@ -107,52 +244,17 @@ def read_dht_sensor():
         print(f"Exception in /data route: {e}")
         return jsonify({'error': str(e)}), 500
 
-# Email function
-def send_email(subject):
-    now = datetime.now()
-    time_str = now.strftime("%H:%M")
-    message = MIMEText(f"{subject} at {time_str}.")
-    message['subject'] = subject
-    message['from'] = FROM_ADDR
-    message['to'] = TO_ADDRS
-
-    try:
-        with smtplib.SMTP_SSL(SMTP_SSL_HOST, SMTP_SSL_PORT) as server:
-            server.login(SMTP_USERNAME, SMTP_PASSWORD)
-            server.sendmail(FROM_ADDR, TO_ADDRS, message.as_string())
-        print("Email sent successfully")
-    except Exception as e:
-        print(f"Error sending email: {e}")
-
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-@app.route('/status')
-def status():
-    return jsonify({
-        'led_status': led_status,
-        'light_intensity': light_intensity,
-        'temperature': temperature,
-        'humidity': humidity,
-        'email_sent_time': last_email_sent_time.strftime("%H:%M:%S") if last_email_sent_time else None
-    })
-
-# MQTT setup
-client = mqtt.Client()
-client.on_message = on_message
-client.connect(BROKER, 1883, 60)
-client.subscribe(TOPIC)
-client.subscribe(TOPIC2)
-client.loop_start()
-
-# Start DHT sensor thread
-threading.Thread(target=read_dht_sensor, daemon=True).start()
-
 if __name__ == '__main__':
-    try:
-        app.run(host='0.0.0.0', port=5001, debug=True)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        GPIO.cleanup()
+    # MQTT Client Setup
+    mqtt_client.on_message = on_message
+    mqtt_client.connect(BROKER, 1883, 60)
+    mqtt_client.subscribe(TOPIC_RFID)
+    mqtt_client.subscribe(TOPIC_LIGHT)
+    mqtt_client.loop_start()
+
+    # Start Email Checking in Background Thread
+    import threading
+    threading.Thread(target=check_email_response, daemon=True).start()
+
+    # Run Flask App
+    app.run(debug=True, host='0.0.0.0', port=5001)

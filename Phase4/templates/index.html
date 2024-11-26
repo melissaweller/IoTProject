@@ -21,12 +21,11 @@
                 <img src="/static/user_avatar.jpg" alt="User Avatar">
             </div>
             <div class="user-details">
-                <p><strong>Username</strong></p>
-                <p>Favorites</p>
-                <p>Temperature: 25°C</p>
-                <p>Humidity: 45%</p>
-                <p>Light intensity: 300 Lux</p>
-                
+                <p><strong id="user-name">Username</strong></p>
+                <p><strong>Favorites</strong></p>
+                <p id="fav-temperature">Temperature: N/A</p>
+                <p id="fav-humidity">Humidity: N/A</p>
+                <p id="fav-light-intensity">Light Intensity: N/A</p>
             </div>
         </section>
 
@@ -42,14 +41,14 @@
             </div>
             <div class="gauge-container">
                 <h2>Fan</h2>
-                <img src="/static/fan_off.png" alt="Fan Icon" height="150px" width="150px">
+                <img id="fan-status" src="/static/fan_off.png" alt="Fan Icon" height="150px" width="150px">
             </div>
         </section>
 
         <section class="light">
             <h2>Light</h2>
             <div class="light-content">
-                <img src="/static/light_off.png" alt="Light Bulb" class="light-bulb" height="150px" width="150px">
+                <img id="light-status" src="/static/light_off.png" alt="Light Bulb" class="light-bulb" height="150px" width="150px">
                 <div class="gauge-container">
                     <h3>Light Intensity</h3>
                     <div id="intensityGauge" class="gauge"></div>
@@ -88,26 +87,55 @@
                 label: "Lux"
             });
 
-            // Update gauges periodically
-            setInterval(async function () {
-                try {
-                    const response = await fetch('/status');
-                    const data = await response.json();
+            // Function to update user details from backend
+            function updateUserFavorites(rfidTag) {
+                fetch(`/get_user_favorites/${rfidTag}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('User not found');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.error) {
+                            alert("User not found!");
+                        } else {
+                            $('#user-name').text(data.name || "Unknown User");
+                            $('#fav-temperature').text(`Temperature: ${data.temperature} °C`);
+                            $('#fav-humidity').text(`Humidity: ${data.humidity}%`);
+                            $('#fav-light-intensity').text(`Light Intensity: ${data.light_intensity} Lux`);
 
-                    tempGauge.refresh(data.temperature);
-                    humidityGauge.refresh(data.humidity);
-                    intensityGauge.refresh(data.light_intensity);
+                            // Set the gauges to the user's favorites
+                            tempGauge.refresh(data.temperature);
+                            intensityGauge.refresh(data.light_intensity);
+                            
+                            // Update the fan and light status
+                            if (data.temperature > data.temperature_favorite) {
+                                $('#fan-status').attr('src', '/static/fan_on.png');
+                            } else {
+                                $('#fan-status').attr('src', '/static/fan_off.png');
+                            }
 
-                    // Update email status
-                    if (data.email_sent_time) {
-                        $('#emailTimestamp').text(`Last email sent: ${data.email_sent_time}`);
-                    } else {
-                        $('#emailTimestamp').text('Last email sent: No email sent');
-                    }
-                } catch (error) {
-                    console.error('Error updating gauges:', error);
-                }
-            }, 5000);
+                            if (data.light_intensity > data.light_intensity_favorite) {
+                                $('#light-status').attr('src', '/static/light_on.png');
+                            } else {
+                                $('#light-status').attr('src', '/static/light_off.png');
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error fetching user favorites:", error);
+                    });
+            }
+
+
+            // Simulate RFID scan for demonstration
+            // Replace this with actual RFID scan trigger
+            setTimeout(() => {
+                // Example RFID tag for testing (replace with real RFID tag from ESP32)
+                const rfidTag = "a1:b2:c3:d4:e5:f6";
+                updateUserFavorites(rfidTag);
+            }, 2000); // 2 seconds delay to simulate RFID scan
         });
     </script>
 </body>
