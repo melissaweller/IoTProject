@@ -91,6 +91,8 @@ def on_message(client, userdata, msg):
                         'humidity': float(user_info['humidity'])
                     }
 
+                send_log_email()
+                
                 # Debugging: print out the user data
                 print(f"User data fetched: light_intensity = {user_data['light_intensity']}, temperature = {user_data['temperature']}, humidity = {user_data['humidity']}")
 
@@ -100,12 +102,16 @@ def on_message(client, userdata, msg):
                 else:
                     mqtt_client.publish(TOPIC_LIGHT_CONTROL, "OFF")  
 
-                # if temperature is not None and temperature > user_data['temperature']:
-                #     if temperature > user_data['temperature'] and not email_sent:
-                #         send_email(temperature)
-                #         email_sent = True
-                #     return jsonify({'temperature': temperature, 'humidity': humidity})
-
+                if temperature is not None and temperature > user_data['temperature']:
+                     if not email_sent or (last_email_sent_time and (datetime.now() - last_email_sent_time > timedelta(minutes=30))):
+                        send_email(temperature)
+                        email_sent = True
+                        last_email_sent_time = datetime.now()
+                        print("Temperature alert email sent!")
+                     return jsonify({'temperature': temperature, 'humidity': humidity})
+                else:
+                    email_sent = False
+                
         elif msg.topic == TOPIC_LIGHT:
             light_intensity = int(msg.payload.decode())  # Update light intensity from MQTT message
             #print(f"Light Intensity: {light_intensity}")
@@ -124,6 +130,23 @@ def get_user_info(rfid_tag):
 def send_email(temperature):
     message = MIMEText(f"The current temperature is {temperature}°C. Would you like to turn on the fan?")
     message['subject'] = 'Temperature Alert'
+    message['from'] = from_addr
+    message['to'] = to_addrs  
+
+    try:
+        server = smtplib.SMTP_SSL(smtp_ssl_host, smtp_ssl_port)
+        server.login(username, password)
+        server.sendmail(from_addr, to_addrs, message.as_string())
+        server.quit()
+        last_email_sent_time = datetime.now()
+        print(f"Email sent at {last_email_sent_time}")
+    except Exception as e:
+        print(f"Error sending email: {e}")
+
+def send_log_email():
+    global user_data
+    message = MIMEText(f"The user {user_data['name']} just signed in!")
+    message['subject'] = 'User Logged In'
     message['from'] = from_addr
     message['to'] = to_addrs  
 
@@ -204,16 +227,6 @@ def read_temperature():
             temperature = dht_sensor.getTemperature()
             humidity = dht_sensor.getHumidity()
             print(f"Temperature: {temperature}°C, Humidity: {humidity}%")
-            
-            # Check if temperature exceeds 20°C and send email if not already sent
-            if temperature > user_data['light_intensity']:
-                if not email_sent or (last_email_sent_time and (datetime.now() - last_email_sent_time > timedelta(minutes=30))):
-                    send_email(temperature)
-                    email_sent = True
-                    last_email_sent_time = datetime.now()
-                    print("Temperature alert email sent!")
-            else:
-                email_sent = False  # Reset the email_sent flag if temperature drops below the threshold
         else:
             print("Failed to read from DHT11 sensor.")
         time.sleep(2)
