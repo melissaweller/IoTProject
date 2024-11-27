@@ -129,6 +129,8 @@ def send_email(temperature):
         server.login(username, password)
         server.sendmail(from_addr, to_addrs, message.as_string())
         server.quit()
+        last_email_sent_time = datetime.now()
+        print(f"Email sent at {last_email_sent_time}")
     except Exception as e:
         print(f"Error sending email: {e}")
 
@@ -136,52 +138,61 @@ def check_email_response():
     global email_sent
     while True:
         try:
+            # Connect to the email server
             mail = imaplib.IMAP4_SSL('imap.gmail.com')
             mail.login(username, password)
-            mail.select('inbox')
-            status, data = mail.search(None, 'UNSEEN')  
-            mail_ids = []
+            mail.select('inbox')  # Access the inbox
 
-            for block in data:
-                mail_ids += block.split()
+            # Search for unseen (new) emails
+            status, data = mail.search(None, 'UNSEEN')
+            mail_ids = data[0].split()
 
             if mail_ids:
-                for i in mail_ids:
-                    status, data = mail.fetch(i, '(RFC822)')
-                    for response_part in data:
+                for mail_id in mail_ids:
+                    status, email_data = mail.fetch(mail_id, '(RFC822)')
+                    for response_part in email_data:
                         if isinstance(response_part, tuple):
+                            # Parse the email
                             message = email.message_from_bytes(response_part[1])
-                            mail_from = message['from']
-                            mail_subject = message['subject']
-                            mail_content = ""
-                            
+                            subject = message['subject']
+                            sender = message['from']
+                            email_body = ""
+
                             if message.is_multipart():
                                 for part in message.walk():
                                     if part.get_content_type() == 'text/plain':
-                                        mail_content = part.get_payload(decode=True).decode()
+                                        email_body = part.get_payload(decode=True).decode()
                             else:
-                                mail_content = message.get_payload(decode=True).decode()
+                                email_body = message.get_payload(decode=True).decode()
 
-                            print(f'From: {mail_from}')
-                            print(f'Subject: {mail_subject}')
-                            print(f'Content: {mail_content}')
+                            print(f"From: {sender}")
+                            print(f"Subject: {subject}")
+                            print(f"Body: {email_body}")
 
-                            if 'Re: Temperature Alert' in mail_subject and mail_from == 'Melissa Weller <' + to_addrs + '>':
-                                if 'yes' in mail_content.lower():
-                                    GPIO.output(Motor1, GPIO.HIGH)  # Start the motor
-                                    GPIO.output(Motor2, GPIO.HIGH)
-                                    GPIO.output(Motor3, GPIO.LOW)
-                                    print("Fan turned ON based on email response.")
-                                elif 'no' in mail_content.lower():
-                                    GPIO.output(Motor1, GPIO.LOW)  # Stop the motor
-                                    print("Fan is OFF based on email response.")
-                                    email_sent = False 
+                            # Check for the specific reply
+                            if 'Temperature Alert' in subject and 'yes' in email_body.lower():
+                                # Turn on the motor
+                                GPIO.output(Motor1, GPIO.HIGH)
+                                GPIO.output(Motor2, GPIO.HIGH)
+                                GPIO.output(Motor3, GPIO.LOW)
+                                print("Motor turned ON based on email response.")
+                                email_sent = False  # Reset the email_sent flag
+
+                            elif 'Temperature Alert' in subject and 'no' in email_body.lower():
+                                # Ensure the motor stays off
+                                GPIO.output(Motor1, GPIO.LOW)
+                                GPIO.output(Motor2, GPIO.LOW)
+                                GPIO.output(Motor3, GPIO.LOW)
+                                print("Motor remains OFF based on email response.")
+                                email_sent = False  # Reset the email_sent flag
 
             mail.logout()
         except Exception as e:
             print(f"Error checking email: {e}")
 
+        # Poll every 30 seconds
         time.sleep(30)
+
 
 def get_user_by_rfid(rfid_tag):
     conn = get_db_connection()
@@ -192,16 +203,27 @@ def get_user_by_rfid(rfid_tag):
     return user
 
 def read_temperature():
-    global temperature, humidity
+    global temperature, humidity, email_sent, last_email_sent_time
     while True:
         result = dht_sensor.readDHT11()
         if result == 0:
             temperature = dht_sensor.getTemperature()
             humidity = dht_sensor.getHumidity()
             print(f"Temperature: {temperature}°C, Humidity: {humidity}%")
+            
+            # Check if temperature exceeds 20°C and send email if not already sent
+            if temperature > 20:
+                if not email_sent or (last_email_sent_time and (datetime.now() - last_email_sent_time > timedelta(minutes=30))):
+                    send_email(temperature)
+                    email_sent = True
+                    last_email_sent_time = datetime.now()
+                    print("Temperature alert email sent!")
+            else:
+                email_sent = False  # Reset the email_sent flag if temperature drops below the threshold
         else:
             print("Failed to read from DHT11 sensor.")
         time.sleep(2)
+
 
 @app.route('/get_user_favorites/<rfid_tag>', methods=['GET'])
 def get_user_favorites(rfid_tag):
@@ -265,7 +287,7 @@ def status():
 
 @app.route('/data', methods=['GET'])
 def data():
-    global temperature, humidity, light_intensity
+    global temperature, humidity, light_intensity, last_email_sent_time
 
     # Fetch RFID tag from the query parameters
     rfid_tag = request.args.get('rfid_tag')
@@ -285,23 +307,31 @@ def data():
 
     if temperature is not None and humidity is not None and light_intensity is not None:
                 # Return the sensor data and user preferences
-        return jsonify({
-            'temperature': temperature,
-            'humidity': humidity,
-            'light_intensity': light_intensity,
-            'fan_status': fan_status,
-            'fav_temperature': user['temperature'] if user else 0,  # User's favorite temperature
-            'fav_humidity': user['humidity'] if user else 0,        # User's favorite humidity
-            'fav_light_intensity': user['light_intensity'] if user else 0  # User's favorite light intensity
-        })
+         return jsonify({
+                'temperature': temperature,
+                'humidity': humidity,
+                'light_intensity': light_intensity,
+                'fan_status': fan_status,
+                'fav_temperature': user['temperature'] if user else 0, # User's favorite temperature
+                'fav_humidity': user['humidity'] if user else 0, # User's favorite humidity
+                'fav_light_intensity': user['light_intensity'] if user else 0, # User's favorite light intensity
+                'last_email_sent_time': last_email_sent_time.strftime('%Y-%m-%d %H:%M:%S') if last_email_sent_time else 'N/A'
+            })
     else:
         return jsonify({'error': 'Sensor data not available'}), 500
+ 
 
 if __name__ == '__main__':
     # Start the background thread for temperature and humidity readings
     temperature_thread = threading.Thread(target=read_temperature)
     temperature_thread.daemon = True
     temperature_thread.start()
+
+    # Start the background thread for email response checking
+    email_thread = threading.Thread(target=check_email_response)
+    email_thread.daemon = True
+    email_thread.start()
+
 
     # Start MQTT client and Flask server
     mqtt_client.connect(BROKER, 1883, 60)

@@ -53,7 +53,7 @@
                 </div>
             </div>
             <h2>Email Status</h2>
-            <p id="emailTimestamp">Last email sent: No email sent</p>
+            <p><strong>Last Email Sent:</strong> <span id="last-email-time">N/A</span></p>
         </section>
     </main>
 
@@ -140,6 +140,19 @@
             // Update every 5 seconds
             setInterval(updateGauges, 1000); // Fetch data every 5 seconds
         });
+
+        $(document).ready(function() {
+        var rfidTag = '12345'; // Replace with dynamic RFID tag value
+
+        // Fetch data from the backend
+        $.get(`/data?rfid_tag=${rfidTag}`, function(data) {
+            if (data.last_email_sent_time) {
+                $('#last-email-time').text(data.last_email_sent_time);
+            } else {
+                $('#last-email-time').text('N/A');
+            }
+        });
+    });
 
     </script>
 </body>
