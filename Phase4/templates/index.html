@@ -21,7 +21,6 @@
             </div>
             <div class="user-details">
                 <p><strong id="user-name">Username</strong></p>
-                <p><strong>Favorites</strong></p>
                 <p id="fav-temperature">Temperature: N/A</p>
                 <p id="fav-humidity">Humidity: N/A</p>
                 <p id="fav-light-intensity">Light Intensity: N/A</p>
@@ -85,30 +84,18 @@
                 label: "Lux"
             });
 
-            // async function updateUser(){
-            //     const response = await fetch('http://127.0.0.1:5001/status');
-            //     const data = await response.json();
-
-            //     $('#user-name').text(data.name || "Unknown User");
-            //     $('#fav-temperature').text('Temperature: ' + data.temperature + '°C');
-            //     $('#fav-humidity').text('Humidity: ' + data.humidity + '%');
-            //     $('#fav-light-intensity').text('Light Intensity: ' + data.light_intensity + ' lux');
-            // }
-
             async function updateGauges() {
-                let rfid_tag = "12345";  // Replace with the actual RFID tag you need
                 try {
                     // Fetch data with the RFID tag as a query parameter
-                    const response = await fetch(`http://127.0.0.1:5001/data?rfid_tag=${rfid_tag}`);
+                    const response = await fetch(`http://127.0.0.1:5001/data`);
                     const data = await response.json();
 
                     if (data.temperature !== undefined && data.humidity !== undefined && data.light_intensity !== undefined) {
                         // Display the user's preferences
-                        console.log("SIGMA!!!");
                         $('#user-name').text(data.name || "Unknown User");
-                        $('#fav-temperature').text('Temperature: ' + data.fav_temperature + '°C');
-                        $('#fav-humidity').text('Humidity: ' + data.fav_humidity + '%');
-                        $('#fav-light-intensity').text('Light Intensity: ' + data.fav_light_intensity + ' lux');
+                        $('#fav-temperature').text('Temperature: ' + data.user_temperature + '°C');
+                        $('#fav-humidity').text('Humidity: ' + data.user_humidity + '%');
+                        $('#fav-light-intensity').text('Light Intensity: ' + data.user_light_intensity + ' lux');
 
                         // Update the gauges
                         tempGauge.refresh(data.temperature);
@@ -136,23 +123,20 @@
                 }
             }
 
-
             // Update every 5 seconds
             setInterval(updateGauges, 1000); // Fetch data every 5 seconds
         });
 
         $(document).ready(function() {
-        var rfidTag = '12345'; // Replace with dynamic RFID tag value
-
-        // Fetch data from the backend
-        $.get(`/data?rfid_tag=${rfidTag}`, function(data) {
-            if (data.last_email_sent_time) {
-                $('#last-email-time').text(data.last_email_sent_time);
-            } else {
-                $('#last-email-time').text('N/A');
-            }
+            // Fetch data from the backend
+            $.get(`/data`, function(data) {
+                if (data.last_email_sent_time) {
+                    $('#last-email-time').text(data.last_email_sent_time);
+                } else {
+                    $('#last-email-time').text('N/A');
+                }
+            });
         });
-    });
 
     </script>
 </body>
