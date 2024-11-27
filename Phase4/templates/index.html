@@ -85,37 +85,61 @@
                 label: "Lux"
             });
 
-            // Function to handle RFID scanning event and fetch user favorites
-            function onRFIDScan(rfidTag) {
-                // Dynamically fetch user data from the backend using the scanned RFID tag
-                $.get('/get_user_favorites/' + rfidTag, function(data) {
-                    if (data.name) {
-                        $('#user-name').text(data.name);
-                        $('#fav-temperature').text('Temperature: ' + data.temperature + '°C');
-                        $('#fav-humidity').text('Humidity: ' + data.humidity + '%');
-                        $('#fav-light-intensity').text('Light Intensity: ' + data.light_intensity + ' lux');
+            // async function updateUser(){
+            //     const response = await fetch('http://127.0.0.1:5001/status');
+            //     const data = await response.json();
 
-                        // Update the gauges with the fetched data
+            //     $('#user-name').text(data.name || "Unknown User");
+            //     $('#fav-temperature').text('Temperature: ' + data.temperature + '°C');
+            //     $('#fav-humidity').text('Humidity: ' + data.humidity + '%');
+            //     $('#fav-light-intensity').text('Light Intensity: ' + data.light_intensity + ' lux');
+            // }
+
+            async function updateGauges() {
+                const rfid_tag = "12345";  // Replace with the actual RFID tag you need
+                try {
+                    // Fetch data with the RFID tag as a query parameter
+                    const response = await fetch(`http://127.0.0.1:5001/data?rfid_tag=${rfid_tag}`);
+                    const data = await response.json();
+
+                    if (data.temperature !== undefined && data.humidity !== undefined && data.light_intensity !== undefined) {
+                        // Display the user's preferences
+                        $('#user-name').text(data.name || "Unknown User");
+                        $('#fav-temperature').text('Temperature: ' + data.fav_temperature + '°C');
+                        $('#fav-humidity').text('Humidity: ' + data.fav_humidity + '%');
+                        $('#fav-light-intensity').text('Light Intensity: ' + data.fav_light_intensity + ' lux');
+
+                        // Update the gauges
                         tempGauge.refresh(data.temperature);
                         humidityGauge.refresh(data.humidity);
                         intensityGauge.refresh(data.light_intensity);
+
+                        // Update fan status
+                        if (data.fan_status === 'ON') {
+                            $('#fan-status').attr('src', '/static/fan_on.png');
+                        } else {
+                            $('#fan-status').attr('src', '/static/fan_off.png');
+                        }
+
+                        // Update the light status
+                        if (data.light_intensity > 300) {
+                            $('#light-status').attr('src', '/static/light_on.png');
+                        } else {
+                            $('#light-status').attr('src', '/static/light_off.png');
+                        }
                     } else {
-                        console.log("Error: " + data.error);
+                        console.error('Invalid data received:', data);
                     }
-                });
+                } catch (error) {
+                    console.error('Error fetching data:', error);
+                }
             }
 
-            // Listen for the event triggered when an RFID tag is scanned
-            // Assuming the RFID scanner triggers a custom event like 'rfidScan' with the scanned tag
-            document.addEventListener("rfidScan", function(event) {
-                var rfidTag = event.detail.rfidTag; // Get the RFID tag from the event details
-                onRFIDScan(rfidTag); // Call the function to process the RFID tag
-            });
 
-            // Note: Your RFID scanner should trigger the `rfidScan` event when a tag is scanned
-            // The event should look like this: 
-            // document.dispatchEvent(new CustomEvent("rfidScan", { detail: { rfidTag: "f3:49:ec:24" }}));
+            // Update every 5 seconds
+            setInterval(updateGauges, 1000); // Fetch data every 5 seconds
         });
+
     </script>
 </body>
 </html>

@@ -57,6 +57,7 @@ email_sent = False
 
 # Tracking Variables
 email_sent = False
+fan_status = False
 last_email_sent_time = None
 light_intensity = 0
 temperature = None
@@ -241,16 +242,57 @@ def status():
     else:
         return jsonify({'error': 'RFID tag not provided'}), 400
 
-@app.route('/data')
+# @app.route('/data')
+# def data():
+#     global temperature, humidity, light_intensity
+
+#     # Assuming you already have temperature, humidity, and light_intensity updated
+#     try:
+#         if temperature is not None and humidity is not None and light_intensity is not None:
+#             return jsonify({
+#                 'temperature': temperature,
+#                 'humidity': humidity,
+#                 'light_intensity': light_intensity,
+#                 'fan_status': 'ON' if GPIO.input(Motor1) == GPIO.HIGH else 'OFF'
+#             })
+#         else:
+#             return jsonify({'error': 'Sensor data not available'}), 500
+#     except Exception as e:
+#         return jsonify({'error': str(e)}), 500
+
+@app.route('/data', methods=['GET'])
 def data():
-    global temperature, humidity
-    try:
-        if temperature is not None and humidity is not None:
-            return jsonify({'temperature': temperature, 'humidity': humidity})
-        else:
-            return jsonify({'error': 'Sensor data not available'}), 500
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    global temperature, humidity, light_intensity
+
+    # Fetch RFID tag from the query parameters
+    rfid_tag = request.args.get('rfid_tag')
+
+    # Check if the RFID tag is provided
+    if not rfid_tag:
+        return jsonify({'error': 'RFID tag is required'}), 400
+
+    # Get user data from the database based on the RFID tag
+    user = get_user_by_rfid(rfid_tag)  # This function should fetch user data from DB
+
+    if user:
+        # User-specific preferences
+        fav_temperature = user['temperature']
+        fav_humidity = user['humidity']
+        fav_light_intensity = user['light_intensity']
+
+    if temperature is not None and humidity is not None and light_intensity is not None:
+                # Return the sensor data and user preferences
+        return jsonify({
+            'temperature': temperature,
+            'humidity': humidity,
+            'light_intensity': light_intensity,
+            'fan_status': fan_status,
+            'fav_temperature': user['temperature'] if user else 0,  # User's favorite temperature
+            'fav_humidity': user['humidity'] if user else 0,        # User's favorite humidity
+            'fav_light_intensity': user['light_intensity'] if user else 0  # User's favorite light intensity
+        })
+    else:
+        return jsonify({'error': 'Sensor data not available'}), 500
 
 if __name__ == '__main__':
     # Start the background thread for temperature and humidity readings
