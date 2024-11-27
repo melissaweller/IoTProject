@@ -4,21 +4,28 @@
 #include <MFRC522.h>
 
 // Wi-Fi settings
-const char* ssid = "Helix-GW";
-const char* password = "miagw0707";
+//const char* ssid = "Helix-GW";
+//const char* password = "miagw0707";
+
+const char* ssid = "FRANK";
+const char* password = "5148810529";
 
 // MQTT Broker settings
-const char* mqtt_server = "10.0.0.89";        
+//const char* mqtt_server = "10.0.0.89";        
+//const char* mqtt_light_topic = "home/light/intensity";
+//const char* mqtt_rfid_topic = "home/rfid/tag";  
+
+const char* mqtt_server = "192.168.2.81";
 const char* mqtt_light_topic = "home/light/intensity";
-const char* mqtt_rfid_topic = "home/rfid/tag";         
+const char* mqtt_rfid_topic = "home/rfid/tag";  
 
 // Pins
 #define LIGHT_SENSOR_PIN 36 
 #define LED_PIN 33       
 #define ANALOG_THRESHOLD 400
 
-#define RST_PIN 4 
-#define SDA_PIN 5  
+#define RST_PIN 5 
+#define SDA_PIN 4  
 
 MFRC522 rfid(SDA_PIN, RST_PIN);
 

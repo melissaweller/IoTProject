@@ -32,7 +32,7 @@ GPIO.setup(Motor3, GPIO.OUT)
 GPIO.output(Motor1, GPIO.LOW)
 
 # MQTT Settings
-BROKER = "10.0.0.89"  # Your MQTT Broker IP
+BROKER = "192.168.2.81"  # Your MQTT Broker IP
 TOPIC_RFID = "home/rfid/tag"
 TOPIC_LIGHT = "home/light/intensity"
 TOPIC_LIGHT_CONTROL = "home/light/control"  # Topic to control the light (send command to ESP32)
@@ -41,7 +41,7 @@ TOPIC_LIGHT_CONTROL = "home/light/control"  # Topic to control the light (send c
 def get_db_connection():
     return mysql.connector.connect(
         host="localhost",
-        user="IoT",  # DB username
+        user="username",  # DB username
         password="password",  # DB password
         database="IoT_Project"  # The name of your database
     )
@@ -72,7 +72,7 @@ def on_message(client, userdata, msg):
     try:
         if msg.topic == TOPIC_RFID:
             rfid_code = msg.payload.decode()
-            response = requests.get(f"http://10.0.0.89:5001/get_user_favorites/{rfid_code}")
+            response = requests.get(f"http://192.168.2.81:5001/get_user_favorites/{rfid_code}")
 
             if response.status_code == 200:
                 user_data = response.json()
@@ -83,11 +83,11 @@ def on_message(client, userdata, msg):
                 user_humidity = float(user_data.get('humidity', 45.0))  # Ensure it's a float
 
                 # Debugging: print out the user data
-                print(f"User data fetched: light_intensity = {user_light_intensity}, temperature = {user_temperature}, humidity = {user_humidity}")
+                #print(f"User data fetched: light_intensity = {user_light_intensity}, temperature = {user_temperature}, humidity = {user_humidity}")
 
                 # If light intensity is lower than the user's preference, send control command to ESP32
                 if light_intensity < user_light_intensity:
-                    print(f"Light intensity {light_intensity} is less than user's preferred {user_light_intensity}. Sending control signal to ESP32.")
+                    #print(f"Light intensity {light_intensity} is less than user's preferred {user_light_intensity}. Sending control signal to ESP32.")
                     mqtt_client.publish(TOPIC_LIGHT_CONTROL, "ON")  # Turn on light via ESP32
 
                 # Control the Fan based on temperature
@@ -95,7 +95,7 @@ def on_message(client, userdata, msg):
                     GPIO.output(Motor1, GPIO.HIGH)  # Turn on fan
                     GPIO.output(Motor2, GPIO.HIGH)
                     GPIO.output(Motor3, GPIO.LOW)
-                    print("Fan turned on due to high temperature.")
+                    #print("Fan turned on due to high temperature.")
                     if not email_sent:  # Send email only once
                         send_email(temperature)
                         email_sent = True
@@ -103,7 +103,7 @@ def on_message(client, userdata, msg):
                     GPIO.output(Motor1, GPIO.LOW)  # Turn off fan if temp is lower
                     GPIO.output(Motor2, GPIO.LOW)
                     GPIO.output(Motor3, GPIO.LOW)
-                    print("Fan turned off due to normal temperature.")
+                    #print("Fan turned off due to normal temperature.")
 
                 # Control air conditioning (or other devices) based on humidity
                 if humidity is not None and humidity > user_humidity:
@@ -112,7 +112,7 @@ def on_message(client, userdata, msg):
 
         elif msg.topic == TOPIC_LIGHT:
             light_intensity = int(msg.payload.decode())  # Update light intensity from MQTT message
-            print(f"Light Intensity: {light_intensity}")
+            #print(f"Light Intensity: {light_intensity}")
 
     except Exception as e:
         print(f"Error processing message: {e}")
@@ -208,6 +208,7 @@ def get_user_favorites(rfid_tag):
     user = get_user_by_rfid(rfid_tag)  # Fetch the user data from the DB based on RFID tag
 
     if user:
+        print("user found")
         return jsonify({
             'name': user['name'],
             'temperature': user['temperature'],
@@ -215,7 +216,9 @@ def get_user_favorites(rfid_tag):
             'light_intensity': user['light_intensity'],
         })
     else:
+        print("user not found 404")
         return jsonify({'error': 'User not found'}), 404
+        
 
 @app.route('/')
 def index():

@@ -96,7 +96,7 @@
             // }
 
             async function updateGauges() {
-                const rfid_tag = "12345";  // Replace with the actual RFID tag you need
+                let rfid_tag = "12345";  // Replace with the actual RFID tag you need
                 try {
                     // Fetch data with the RFID tag as a query parameter
                     const response = await fetch(`http://127.0.0.1:5001/data?rfid_tag=${rfid_tag}`);
@@ -104,6 +104,7 @@
 
                     if (data.temperature !== undefined && data.humidity !== undefined && data.light_intensity !== undefined) {
                         // Display the user's preferences
+                        console.log("SIGMA!!!");
                         $('#user-name').text(data.name || "Unknown User");
                         $('#fav-temperature').text('Temperature: ' + data.fav_temperature + '°C');
                         $('#fav-humidity').text('Humidity: ' + data.fav_humidity + '%');
