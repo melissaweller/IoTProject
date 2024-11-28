@@ -35,7 +35,7 @@ user_data = None
 user_data_lock = threading.Lock()
 
 # MQTT 
-BROKER = "10.0.0.89"  
+BROKER = "172.20.10.8"  
 TOPIC_RFID = "home/rfid/tag"
 TOPIC_LIGHT = "home/light/intensity"
 TOPIC_USER_LIGHT = "home/user/light/intensity"
@@ -56,10 +56,9 @@ username = 'iotproject87@gmail.com'
 password = 'eeka ftkg smpe qknf'
 from_addr = 'iotproject87@gmail.com'
 to_addrs = 'testingsample2003@gmail.com'
-email_sent = False
 
 email_sent = False
-fan_status = False
+fan_status = 0
 led_status = False
 last_email_sent_time = None
 light_intensity = 0
@@ -228,12 +227,15 @@ def check_email_response():
                             print(f"Body: {email_body}")
 
                             if 'Temperature Alert' in subject and 'yes' in email_body.lower():
+                                #fan_status = 1
                                 GPIO.output(Motor1, GPIO.HIGH)
                                 GPIO.output(Motor2, GPIO.HIGH)
                                 GPIO.output(Motor3, GPIO.LOW)
                                 print("Motor turned ON based on email response.")
+                                print(fan_status)
                                 email_sent = False 
                             elif 'Temperature Alert' in subject and 'no' in email_body.lower():
+                                #fan_status = 0
                                 GPIO.output(Motor1, GPIO.LOW)
                                 GPIO.output(Motor2, GPIO.LOW)
                                 GPIO.output(Motor3, GPIO.LOW)
@@ -264,6 +266,9 @@ def index():
 @app.route('/data', methods=['GET'])
 def data():
     global temperature, humidity, light_intensity, last_email_sent_time, user_data, email_sent
+    motor_status = GPIO.input(Motor1)
+    fan_status = motor_status == GPIO.LOW
+    print(fan_status)
 
     if user_data is None:
         return jsonify({

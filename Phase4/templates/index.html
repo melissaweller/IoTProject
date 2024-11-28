@@ -65,7 +65,7 @@
                 max: 50,
                 title: "Temperature (°C)"
             });
-
+    
             var humidityGauge = new JustGage({
                 id: "humidityGauge",
                 value: 0,
@@ -73,7 +73,7 @@
                 max: 100,
                 title: "Humidity (%)"
             });
-
+    
             var intensityGauge = new JustGage({
                 id: "intensityGauge",
                 value: 0,
@@ -82,13 +82,13 @@
                 title: "Light Intensity",
                 label: "Lux"
             });
-
+    
             async function updateGauges() {
                 try {
                     // Fetch data with the RFID tag as a query parameter
                     const response = await fetch(`http://127.0.0.1:5001/data`);
                     const data = await response.json();
-
+    
                     if (data.temperature !== undefined && data.humidity !== undefined && data.light_intensity !== undefined) {
                         // Display the user's preferences
                         $('#user-name').text(data.name || "Unknown User");
@@ -96,20 +96,20 @@
                         $('#fav-humidity').text('Humidity: ' + data.user_humidity + '%');
                         $('#fav-light-intensity').text('Light Intensity: ' + data.user_light_intensity + ' lux');
                         document.getElementById('user-avatar').src = `${data.user_pic}`;
-
+    
                         // Update the gauges
                         tempGauge.refresh(data.temperature);
                         humidityGauge.refresh(data.humidity);
                         intensityGauge.refresh(data.light_intensity);
-
-                        // Update fan status
-                        if (data.fan_status) {
+    
+                        // Update fan status and change the image
+                        if (data.fan_status == false) {
+                            console.log(data.fan_status);
                             $('#fan-status').attr('src', '/static/fan_on.png');
-                            $('#last-email-time').text(data.last_email_sent_time)
                         } else {
                             $('#fan-status').attr('src', '/static/fan_off.png');
                         }
-
+    
                         // Update the light status
                         if (data.light_intensity > 300) {
                             $('#light-status').attr('src', '/static/light_off.png');
@@ -123,25 +123,24 @@
                     console.error('Error fetching data:', error);
                 }
             }
-
+    
             async function updateTime() {
-                try{
+                try {
                     const response = await fetch(`http://127.0.0.1:5001/data`);
                     const data = await response.json();
-
+    
                     if (data.last_email_sent_time) {
                         $('#last-email-time').text(data.last_email_sent_time);
                     } else {
                         $('#last-email-time').text('No Email Sent');
                     }
-                }
-                catch (error) {
+                } catch (error) {
                     console.error('Error fetching data:', error);
                 }
             }
             setInterval(updateGauges, 1000);
             setInterval(updateTime, 1000);
         });
-    </script>
+    </script>    
 </body>
 </html>

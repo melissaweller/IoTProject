@@ -4,11 +4,11 @@
 #include <MFRC522.h>
 
 // Wi-Fi settings
-const char* ssid = "Helix-GW";
+const char* ssid = "Melissa";
 const char* password = "miagw0707";
 
 // MQTT Broker settings
-const char* mqtt_server = "10.0.0.89";        
+const char* mqtt_server = "172.20.10.8";        
 const char* mqtt_light_topic = "home/light/intensity";
 const char* mqtt_rfid_topic = "home/rfid/tag";  
 const char* mqtt_user_light_topic = "home/user/light/intensity";
