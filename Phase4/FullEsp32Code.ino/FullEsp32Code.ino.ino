@@ -4,28 +4,23 @@
 #include <MFRC522.h>
 
 // Wi-Fi settings
-//const char* ssid = "Helix-GW";
-//const char* password = "miagw0707";
-
-const char* ssid = "FRANK";
-const char* password = "5148810529";
+const char* ssid = "Helix-GW";
+const char* password = "miagw0707";
 
 // MQTT Broker settings
-//const char* mqtt_server = "10.0.0.89";        
-//const char* mqtt_light_topic = "home/light/intensity";
-//const char* mqtt_rfid_topic = "home/rfid/tag";  
-
-const char* mqtt_server = "192.168.2.81";
+const char* mqtt_server = "10.0.0.89";        
 const char* mqtt_light_topic = "home/light/intensity";
 const char* mqtt_rfid_topic = "home/rfid/tag";  
+const char* mqtt_user_light_topic = "home/user/light/intensity";
+
+int user_light_intensity_threshold = 4000; 
 
 // Pins
 #define LIGHT_SENSOR_PIN 36 
 #define LED_PIN 33       
-#define ANALOG_THRESHOLD 400
 
-#define RST_PIN 5 
-#define SDA_PIN 4  
+#define RST_PIN 4 
+#define SDA_PIN 5  
 
 MFRC522 rfid(SDA_PIN, RST_PIN);
 
@@ -62,6 +57,14 @@ void loop() {
   delay(1000);  
 }
 
+void callback(char* topic, byte* payload, unsigned int length) {
+  if (strcmp(topic, mqtt_user_light_topic) == 0) {
+    user_light_intensity_threshold = atoi((char*)payload);
+    Serial.print("User's light intensity threshold set to: ");
+    Serial.println(user_light_intensity_threshold);
+  }
+}
+
 void setupWiFi() {
   Serial.println("Connecting to WiFi...");
   WiFi.begin(ssid, password);
@@ -74,10 +77,12 @@ void setupWiFi() {
 
 void setupMQTT() {
   client.setServer(mqtt_server, 1883);
+  client.setCallback(callback);
   Serial.println("Connecting to MQTT Broker...");
   while (!client.connected()) {
     if (client.connect("ESP32_Client")) {
       Serial.println("Connected to MQTT Broker");
+      client.subscribe(mqtt_user_light_topic);
     } else {
       Serial.print("Failed to connect to MQTT, state: ");
       Serial.println(client.state());
@@ -94,10 +99,10 @@ void handleLightSensor() {
     client.publish(mqtt_light_topic, payload.c_str());
   }
 
-  if (lightValue < ANALOG_THRESHOLD) {
-    digitalWrite(LED_PIN, HIGH);
+  if (lightValue < user_light_intensity_threshold) {
+    digitalWrite(LED_PIN, HIGH);  
   } else {
-    digitalWrite(LED_PIN, LOW);  
+    digitalWrite(LED_PIN, LOW); 
   }
 }
 

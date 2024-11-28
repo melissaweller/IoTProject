@@ -11,13 +11,15 @@ CREATE TABLE IF NOT EXISTS users (
     rfid_tag VARCHAR(255) NOT NULL UNIQUE,   
     light_intensity INT DEFAULT 0,           
     temperature DECIMAL(5,2) DEFAULT NULL,  
-    humidity DECIMAL(5,2) DEFAULT NULL,      
+    humidity DECIMAL(5,2) DEFAULT NULL,
+    profile_pic VARCHAR(500),       
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP -- Last update timestamp
 );
 
 -- Insert a sample user (you can add more as needed)
-INSERT INTO users (name, rfid_tag, light_intensity, temperature, humidity)
-VALUES ('Melissa', 'f3:49:ec:24', 400, 22.5, 45.0); 
+INSERT INTO users (name, rfid_tag, light_intensity, temperature, humidity, profile_pic)
+VALUES ('Melissa', 'f3:49:ec:24', 600, 22.5, 45.0, '/static/profile_pic1.png'); 
 
-INSERT INTO users (name, rfid_tag, light_intensity, temperature, humidity)
-VALUES ('Davide', 'd3:98:db:0f', 200, 20, 45.0); 
+INSERT INTO users (name, rfid_tag, light_intensity, temperature, humidity, profile_pic)
+VALUES ('Davide', 'd3:98:db:0f', 200, 20, 45.0, '/static/profile_pic2.png'); 
+
